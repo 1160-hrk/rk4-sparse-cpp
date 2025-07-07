@@ -26,6 +26,7 @@ class ProfilingResult:
     thread_count: int
     memory_peak: float
     function_stats: dict
+    matrix_stats: dict  # 行列演算の統計情報を追加
     timestamp: datetime = datetime.now()
 
 class PerformanceProfiler:
@@ -40,21 +41,39 @@ class PerformanceProfiler:
         # メモリトラッキング開始
         tracemalloc.start()
         
-        # CPU使用率の初期値
-        initial_cpu = self.process.cpu_percent()
+        # CPU使用率の初期値を複数回測定して平均を取る
+        initial_cpu_samples = [self.process.cpu_percent() for _ in range(5)]
+        initial_cpu = sum(initial_cpu_samples) / len(initial_cpu_samples)
         initial_memory = self.process.memory_info().rss / 1024 / 1024  # MB
         
-        # 関数の実行時間を計測
-        start_time = time.time()
+        # 行列演算の統計情報を収集
+        H0, mux, muy = args[:3]
+        matrix_stats = {
+            'H0_nnz': H0.nnz,
+            'H0_density': H0.nnz / (H0.shape[0] * H0.shape[1]),
+            'mux_nnz': mux.nnz,
+            'mux_density': mux.nnz / (mux.shape[0] * mux.shape[1]),
+            'muy_nnz': muy.nnz,
+            'muy_density': muy.nnz / (muy.shape[0] * muy.shape[1]),
+            'dimension': H0.shape[0]
+        }
+        
+        # 関数の実行時間を詳細に計測
+        detailed_times = []
+        start_time = time.perf_counter_ns()  # ナノ秒単位で計測
+        
         result = func(*args, **kwargs)
-        execution_time = time.time() - start_time
+        
+        end_time = time.perf_counter_ns()
+        execution_time = (end_time - start_time) / 1e9  # 秒に変換
         
         # メモリ使用量の計測
         current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         
-        # CPU使用率と統計情報の収集
-        cpu_usage = self.process.cpu_percent()
+        # CPU使用率を複数回測定して平均を取る
+        cpu_samples = [self.process.cpu_percent() for _ in range(5)]
+        cpu_usage = sum(cpu_samples) / len(cpu_samples)
         memory_usage = self.process.memory_info().rss / 1024 / 1024  # MB
         thread_count = self.process.num_threads()
         
@@ -62,6 +81,7 @@ class PerformanceProfiler:
         stats = {
             func.__name__: {
                 'total_time': execution_time,
+                'time_per_step': execution_time / (len(args[4]) - 1),  # Ex配列の長さからステップ数を推定
                 'hits': 1,
                 'average': execution_time
             }
@@ -71,10 +91,11 @@ class PerformanceProfiler:
         profile_result = ProfilingResult(
             execution_time=execution_time,
             cpu_usage=cpu_usage,
-            memory_usage=memory_usage - initial_memory,  # 差分を記録
+            memory_usage=memory_usage - initial_memory,
             thread_count=thread_count,
-            memory_peak=peak / 1024 / 1024,  # MB
-            function_stats=stats
+            memory_peak=peak / 1024 / 1024,
+            function_stats=stats,
+            matrix_stats=matrix_stats
         )
         
         self.results.append(profile_result)
@@ -94,9 +115,20 @@ def plot_performance_metrics(
     plt.plot(steps_list, times, 'b-', marker='o')
     plt.xlabel('Number of Steps')
     plt.ylabel('Execution Time [sec]')
-    plt.title('Execution Time vs Steps')
+    plt.title('Total Execution Time vs Steps')
     plt.grid(True)
     plt.savefig(os.path.join(save_dir, f'execution_time_{timestamp}.png'))
+    plt.close()
+    
+    # ステップあたりの実行時間
+    plt.figure(figsize=(10, 6))
+    times_per_step = [r.function_stats['rk4_cpu_sparse']['time_per_step'] for r in profiler.results]
+    plt.plot(steps_list, times_per_step, 'r-', marker='o')
+    plt.xlabel('Number of Steps')
+    plt.ylabel('Time per Step [sec]')
+    plt.title('Time per Step vs Total Steps')
+    plt.grid(True)
+    plt.savefig(os.path.join(save_dir, f'time_per_step_{timestamp}.png'))
     plt.close()
     
     # CPU使用率のプロット
@@ -127,13 +159,28 @@ def print_system_info():
     print(f"CPU Cores: {multiprocessing.cpu_count()}")
     print(f"Total Memory: {psutil.virtual_memory().total / (1024**3):.1f} GB")
     print(f"Available Memory: {psutil.virtual_memory().available / (1024**3):.1f} GB")
+    
+    # OpenMPの設定を確認
+    print("\nOpenMP Configuration:")
     try:
-        import torch
-        print(f"PyTorch CUDA Available: {torch.cuda.is_available()}")
-        if torch.cuda.is_available():
-            print(f"GPU: {torch.cuda.get_device_name(0)}")
+        import os
+        print(f"OMP_NUM_THREADS: {os.environ.get('OMP_NUM_THREADS', 'Not set')}")
+        print(f"OMP_SCHEDULE: {os.environ.get('OMP_SCHEDULE', 'Not set')}")
+        print(f"OMP_DYNAMIC: {os.environ.get('OMP_DYNAMIC', 'Not set')}")
+    except Exception as e:
+        print(f"Could not get OpenMP settings: {e}")
+    
+    # CPUの詳細情報
+    try:
+        import cpuinfo
+        info = cpuinfo.get_cpu_info()
+        print(f"\nCPU Information:")
+        print(f"Brand: {info.get('brand_raw', 'Unknown')}")
+        print(f"Architecture: {info.get('arch', 'Unknown')}")
+        print(f"Flags: {', '.join(info.get('flags', []))[:100]}...")
     except ImportError:
-        print("PyTorch not available")
+        print("\nCPU Information: py-cpuinfo not available")
+    
     print("========================\n")
 
 def create_test_matrices(size: int = 2) -> Tuple[sp.csc_matrix, sp.csc_matrix, sp.csc_matrix]:
@@ -207,12 +254,12 @@ def main():
     stride = 1
     
     # 異なるステップ数でプロファイリングを実行
-    steps_list = [100, 200, 500, 1000]
+    steps_list = [100, 200, 500, 1000, 2000, 5000]  # より大きなステップ数も試す
     profiler = PerformanceProfiler()
     
     print("\n=== Performance Metrics ===")
-    print(f"{'Steps':>8} | {'Time [s]':>10} | {'CPU [%]':>8} | {'Mem [MB]':>8} | {'Threads':>7}")
-    print("-" * 60)
+    print(f"{'Steps':>8} | {'Time [s]':>10} | {'Time/Step [µs]':>14} | {'CPU [%]':>8} | {'Mem [MB]':>8} | {'Threads':>7}")
+    print("-" * 80)
     
     for steps in steps_list:
         Ex, Ey = create_test_pulse(steps)
@@ -220,10 +267,19 @@ def main():
             H0, mux, muy, psi0, Ex, Ey, dt, steps - 1, stride, False
         )
         
-        print(f"{steps:8d} | {result.execution_time:10.6f} | {result.cpu_usage:8.1f} | "
-              f"{result.memory_usage:8.1f} | {result.thread_count:7d}")
+        time_per_step = result.function_stats['rk4_cpu_sparse']['time_per_step'] * 1e6  # マイクロ秒に変換
+        print(f"{steps:8d} | {result.execution_time:10.6f} | {time_per_step:14.2f} | "
+              f"{result.cpu_usage:8.1f} | {result.memory_usage:8.1f} | {result.thread_count:7d}")
         
         profiler.results.append(result)
+    
+    # 行列情報の表示
+    print("\n=== Matrix Information ===")
+    matrix_stats = profiler.results[0].matrix_stats
+    print(f"Matrix dimension: {matrix_stats['dimension']}x{matrix_stats['dimension']}")
+    print(f"H0  - Non-zeros: {matrix_stats['H0_nnz']}, Density: {matrix_stats['H0_density']*100:.2f}%")
+    print(f"mux - Non-zeros: {matrix_stats['mux_nnz']}, Density: {matrix_stats['mux_density']*100:.2f}%")
+    print(f"muy - Non-zeros: {matrix_stats['muy_nnz']}, Density: {matrix_stats['muy_density']*100:.2f}%")
     
     # 結果をプロット
     plot_performance_metrics(profiler, steps_list, output_dir)

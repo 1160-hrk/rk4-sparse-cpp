@@ -6,8 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../build'))  # ビル�
 import numpy as np
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
-from python.rk4_sparse_py import rk4_cpu_sparse as rk4_cpu_sparse_py
-import _excitation_rk4_sparse as rk4_cpu_sparse_cpp
+from python import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
 
 
 # シミュレーションパラメータ
@@ -72,7 +71,7 @@ print(f"muy nnz: {muy.nnz}")
 
 # C++実装での時間発展を計算
 print("\nRunning C++ implementation...")
-result_cpp = rk4_cpu_sparse_cpp.rk4_cpu_sparse(
+result_cpp = rk4_cpu_sparse_cpp(
     H0, mux, muy,
     Ex, Ey,
     psi0,
@@ -81,7 +80,6 @@ result_cpp = rk4_cpu_sparse_cpp.rk4_cpu_sparse(
     stride,
     False,
 )
-
 
 print("C++ implementation completed.")
 print(f"Result shape (C++): {result_cpp.shape}")
