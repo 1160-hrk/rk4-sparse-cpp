@@ -13,12 +13,17 @@ using namespace excitation_rk4_sparse;
 using cplx = std::complex<double>;
 
 // CSRデータからEigenの疎行列を構築するヘルパー関数
-Eigen::SparseMatrix<std::complex<double>> build_sparse_matrix(
-    py::array_t<std::complex<double>> data,
-    py::array_t<int> indices,
-    py::array_t<int> indptr,
-    int rows, int cols)
+Eigen::SparseMatrix<std::complex<double>> build_sparse_matrix_from_scipy(
+    const py::object& scipy_sparse_matrix)
 {
+    // scipy.sparseの行列からデータを取得
+    py::array_t<std::complex<double>> data = scipy_sparse_matrix.attr("data").cast<py::array_t<std::complex<double>>>();
+    py::array_t<int> indices = scipy_sparse_matrix.attr("indices").cast<py::array_t<int>>();
+    py::array_t<int> indptr = scipy_sparse_matrix.attr("indptr").cast<py::array_t<int>>();
+    int rows = scipy_sparse_matrix.attr("shape").attr("__getitem__")(0).cast<int>();
+    int cols = scipy_sparse_matrix.attr("shape").attr("__getitem__")(1).cast<int>();
+
+    // Eigen形式の疎行列を構築
     Eigen::SparseMatrix<std::complex<double>> mat(rows, cols);
     std::vector<Eigen::Triplet<std::complex<double>>> triplets;
     
@@ -47,17 +52,9 @@ PYBIND11_MODULE(_excitation_rk4_sparse, m) {
         .def_readonly("rk4_steps", &PerformanceMetrics::rk4_steps);
     
     m.def("rk4_cpu_sparse", [](
-        py::array_t<cplx> H0_data,
-        py::array_t<int> H0_indices,
-        py::array_t<int> H0_indptr,
-        int H0_rows,
-        int H0_cols,
-        py::array_t<cplx> mux_data,
-        py::array_t<int> mux_indices,
-        py::array_t<int> mux_indptr,
-        py::array_t<cplx> muy_data,
-        py::array_t<int> muy_indices,
-        py::array_t<int> muy_indptr,
+        const py::object& H0,
+        const py::object& mux,
+        const py::object& muy,
         py::array_t<double> Ex,
         py::array_t<double> Ey,
         py::array_t<cplx> psi0,
@@ -66,16 +63,18 @@ PYBIND11_MODULE(_excitation_rk4_sparse, m) {
         int stride,
         bool renorm
     ) {
+        // 入力チェック
+        if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
+            throw std::runtime_error("H0 must be a scipy.sparse.csr_matrix");
+        }
+        if (!py::hasattr(mux, "data") || !py::hasattr(mux, "indices") || !py::hasattr(mux, "indptr")) {
+            throw std::runtime_error("mux must be a scipy.sparse.csr_matrix");
+        }
+        if (!py::hasattr(muy, "data") || !py::hasattr(muy, "indices") || !py::hasattr(muy, "indptr")) {
+            throw std::runtime_error("muy must be a scipy.sparse.csr_matrix");
+        }
+
         // バッファ情報の取得
-        py::buffer_info H0_data_buf = H0_data.request();
-        py::buffer_info H0_indices_buf = H0_indices.request();
-        py::buffer_info H0_indptr_buf = H0_indptr.request();
-        py::buffer_info mux_data_buf = mux_data.request();
-        py::buffer_info mux_indices_buf = mux_indices.request();
-        py::buffer_info mux_indptr_buf = mux_indptr.request();
-        py::buffer_info muy_data_buf = muy_data.request();
-        py::buffer_info muy_indices_buf = muy_indices.request();
-        py::buffer_info muy_indptr_buf = muy_indptr.request();
         py::buffer_info Ex_buf = Ex.request();
         py::buffer_info Ey_buf = Ey.request();
         py::buffer_info psi0_buf = psi0.request();
@@ -86,54 +85,9 @@ PYBIND11_MODULE(_excitation_rk4_sparse, m) {
         }
 
         // CSR行列の構築
-        Eigen::SparseMatrix<cplx> H0_mat(H0_rows, H0_cols);
-        Eigen::SparseMatrix<cplx> mux_mat(H0_rows, H0_cols);
-        Eigen::SparseMatrix<cplx> muy_mat(H0_rows, H0_cols);
-
-        // H0の構築
-        {
-            std::vector<Eigen::Triplet<cplx>> triplets;
-            auto H0_data_ptr = static_cast<cplx*>(H0_data_buf.ptr);
-            auto H0_indices_ptr = static_cast<int*>(H0_indices_buf.ptr);
-            auto H0_indptr_ptr = static_cast<int*>(H0_indptr_buf.ptr);
-
-            for (int i = 0; i < H0_rows; i++) {
-                for (int j = H0_indptr_ptr[i]; j < H0_indptr_ptr[i + 1]; j++) {
-                    triplets.emplace_back(i, H0_indices_ptr[j], H0_data_ptr[j]);
-                }
-            }
-            H0_mat.setFromTriplets(triplets.begin(), triplets.end());
-        }
-
-        // muxの構築
-        {
-            std::vector<Eigen::Triplet<cplx>> triplets;
-            auto mux_data_ptr = static_cast<cplx*>(mux_data_buf.ptr);
-            auto mux_indices_ptr = static_cast<int*>(mux_indices_buf.ptr);
-            auto mux_indptr_ptr = static_cast<int*>(mux_indptr_buf.ptr);
-
-            for (int i = 0; i < H0_rows; i++) {
-                for (int j = mux_indptr_ptr[i]; j < mux_indptr_ptr[i + 1]; j++) {
-                    triplets.emplace_back(i, mux_indices_ptr[j], mux_data_ptr[j]);
-                }
-            }
-            mux_mat.setFromTriplets(triplets.begin(), triplets.end());
-        }
-
-        // muyの構築
-        {
-            std::vector<Eigen::Triplet<cplx>> triplets;
-            auto muy_data_ptr = static_cast<cplx*>(muy_data_buf.ptr);
-            auto muy_indices_ptr = static_cast<int*>(muy_indices_buf.ptr);
-            auto muy_indptr_ptr = static_cast<int*>(muy_indptr_buf.ptr);
-
-            for (int i = 0; i < H0_rows; i++) {
-                for (int j = muy_indptr_ptr[i]; j < muy_indptr_ptr[i + 1]; j++) {
-                    triplets.emplace_back(i, muy_indices_ptr[j], muy_data_ptr[j]);
-                }
-            }
-            muy_mat.setFromTriplets(triplets.begin(), triplets.end());
-        }
+        Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
+        Eigen::SparseMatrix<cplx> mux_mat = build_sparse_matrix_from_scipy(mux);
+        Eigen::SparseMatrix<cplx> muy_mat = build_sparse_matrix_from_scipy(muy);
 
         // 電場とpsi0の変換
         Eigen::Map<const Eigen::VectorXd> Ex_vec(static_cast<double*>(Ex_buf.ptr), Ex_buf.shape[0]);
@@ -148,17 +102,9 @@ PYBIND11_MODULE(_excitation_rk4_sparse, m) {
             dt, return_traj, stride, renorm
         );
     },
-    py::arg("H0_data"),
-    py::arg("H0_indices"),
-    py::arg("H0_indptr"),
-    py::arg("H0_rows"),
-    py::arg("H0_cols"),
-    py::arg("mux_data"),
-    py::arg("mux_indices"),
-    py::arg("mux_indptr"),
-    py::arg("muy_data"),
-    py::arg("muy_indices"),
-    py::arg("muy_indptr"),
+    py::arg("H0"),
+    py::arg("mux"),
+    py::arg("muy"),
     py::arg("Ex"),
     py::arg("Ey"),
     py::arg("psi0"),

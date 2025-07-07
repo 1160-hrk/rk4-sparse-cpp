@@ -73,10 +73,7 @@ print(f"muy nnz: {muy.nnz}")
 # C++実装での時間発展を計算
 print("\nRunning C++ implementation...")
 result_cpp = rk4_cpu_sparse_cpp.rk4_cpu_sparse(
-    H0.data, H0.indices, H0.indptr,
-    H0.shape[0], H0.shape[1],
-    mux.data, mux.indices, mux.indptr,
-    muy.data, muy.indices, muy.indptr,
+    H0, mux, muy,
     Ex, Ey,
     psi0,
     dt_E*2,

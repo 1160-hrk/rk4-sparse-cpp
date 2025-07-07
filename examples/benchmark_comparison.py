@@ -10,33 +10,16 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../build'))
 from python.rk4_sparse_py import rk4_cpu_sparse as rk4_cpu_sparse_py
 import _excitation_rk4_sparse as rk4_cpu_sparse_cpp
 
-def create_test_system(dim):
-    """指定したサイズのテスト系を生成"""
-    # 対角要素のみを持つH0（スパース）
-    H0_data = np.arange(dim, dtype=np.complex128)
-    H0 = csr_matrix((H0_data, (np.arange(dim), np.arange(dim))), shape=(dim, dim))
-    
-    # 隣接要素のみを持つmux（スパース）
-    mux_data = np.ones(dim-1, dtype=np.complex128)
-    mux = csr_matrix((mux_data, (np.arange(dim-1), np.arange(1, dim))), shape=(dim, dim))
-    mux = mux + mux.T
-    
-    # ゼロ行列のmuy（スパース）
+def create_test_system(dim, num_steps=1000):
+    """テストシステムを生成"""
+    # ハミルトニアンと双極子演算子の生成
+    H0 = csr_matrix(np.diag(np.arange(dim)), dtype=np.complex128)
+    mux = csr_matrix(np.eye(dim, k=1) + np.eye(dim, k=-1), dtype=np.complex128)
     muy = csr_matrix((dim, dim), dtype=np.complex128)
     
     # 初期状態
     psi0 = np.zeros(dim, dtype=np.complex128)
     psi0[0] = 1.0
-    
-    return H0, mux, muy, psi0
-
-def run_benchmark(dims, num_repeats=5, num_steps=1000):
-    """ベンチマーク実行"""
-    results = {
-        'python': {dim: [] for dim in dims},
-        'cpp': {dim: [] for dim in dims},
-        'speedup': {dim: 0.0 for dim in dims}
-    }
     
     # 電場パラメータ
     dt_E = 0.01
@@ -46,9 +29,21 @@ def run_benchmark(dims, num_repeats=5, num_steps=1000):
     Ex = E0 * np.sin(omega_L * t)
     Ey = np.zeros_like(Ex)
     
+    return H0, mux, muy, Ex, Ey, psi0, dt_E
+
+def run_benchmark(dims, num_repeats=5, num_steps=1000):
+    """ベンチマークを実行"""
+    results = {
+        'python': {dim: [] for dim in dims},
+        'cpp': {dim: [] for dim in dims},
+        'speedup': {dim: 0.0 for dim in dims}
+    }
+
     for dim in dims:
         print(f"\n次元数: {dim}")
-        H0, mux, muy, psi0 = create_test_system(dim)
+        
+        # テストシステムの生成
+        H0, mux, muy, Ex, Ey, psi0, dt_E = create_test_system(dim)
         
         # Python実装
         print("Python実装の実行中...")
@@ -61,18 +56,22 @@ def run_benchmark(dims, num_repeats=5, num_steps=1000):
         
         # C++実装
         print("C++実装の実行中...")
+        times = []
         for i in range(num_repeats):
             start_time = time.time()
             _ = rk4_cpu_sparse_cpp.rk4_cpu_sparse(
-                H0.data, H0.indices, H0.indptr,
-                H0.shape[0], H0.shape[1],
-                mux.data, mux.indices, mux.indptr,
-                muy.data, muy.indices, muy.indptr,
-                Ex, Ey, psi0, dt_E*2, True, 1, False
+                H0, mux, muy,
+                Ex, Ey,
+                psi0,
+                dt_E*2,
+                True,
+                1,
+                False
             )
             end_time = time.time()
-            results['cpp'][dim].append(end_time - start_time)
-            print(f"  反復 {i+1}/{num_repeats}: {results['cpp'][dim][-1]:.3f} 秒")
+            times.append(end_time - start_time)
+            print(f"  反復 {i+1}/{num_repeats}: {times[-1]:.3f} 秒")
+        results['cpp'][dim] = times
         
         # 平均速度向上率を計算
         py_mean = np.mean(results['python'][dim])
