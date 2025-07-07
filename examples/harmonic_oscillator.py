@@ -78,7 +78,7 @@ def create_gaussian_pulse(t: np.ndarray, omega_L: float, t0: float, sigma: float
 
 def main():
     # パラメータ設定
-    n_levels = 10  # 準位数
+    n_levels = 40  # 準位数
     omega = 10.0    # 角振動数
     hbar = 1.0     # プランク定数
     mu0 = 1.0      # 双極子モーメント
