@@ -1,0 +1,19 @@
+{
+    "name": "excitation-rk4-sparse-dev",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+    },
+    "extensions": [
+        "ms-python.python",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+    ],
+    "forwardPorts": [],
+    "postCreateCommand": {
+        "pip install -e .[dev]",
+        "pip install -r requirements.txt"
+    },
+}

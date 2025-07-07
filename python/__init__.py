@@ -1,0 +1,1 @@
+from ._excitation_rk4_sparse import rk4_propagate
