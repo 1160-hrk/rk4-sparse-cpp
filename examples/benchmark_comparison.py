@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '../build'))
 
-from python.rk4_sparse_py import rk4_cpu_sparse as rk4_cpu_sparse_py
-import _excitation_rk4_sparse as rk4_cpu_sparse_cpp
+from python import rk4_cpu_sparse_py
+from python import rk4_cpu_sparse_cpp
 
 def create_test_system(dim, num_steps=1000):
     """テストシステムを生成"""
@@ -59,7 +59,7 @@ def run_benchmark(dims, num_repeats=5, num_steps=1000):
         times = []
         for i in range(num_repeats):
             start_time = time.time()
-            _ = rk4_cpu_sparse_cpp.rk4_cpu_sparse(
+            _ = rk4_cpu_sparse_cpp(
                 H0, mux, muy,
                 Ex, Ey,
                 psi0,

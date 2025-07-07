@@ -124,8 +124,8 @@ def plot_comparison_metrics(
     
     # ステップあたりの実行時間の比較
     plt.figure(figsize=(12, 6))
-    py_times_per_step = [r.function_stats['rk4_cpu_sparse']['time_per_step'] * 1e6 for r in python_profiler.results]
-    cpp_times_per_step = [r.function_stats['rk4_cpu_sparse']['time_per_step'] * 1e6 for r in cpp_profiler.results]
+    py_times_per_step = [r.function_stats['run_python_profile']['time_per_step'] * 1e6 for r in python_profiler.results]
+    cpp_times_per_step = [r.function_stats['run_cpp_profile']['time_per_step'] * 1e6 for r in cpp_profiler.results]
     
     plt.plot(steps_list, py_times_per_step, 'b-', marker='o', label='Python')
     plt.plot(steps_list, cpp_times_per_step, 'r-', marker='s', label='C++')
@@ -215,8 +215,8 @@ def print_comparison_results(
         cpp_time = cpp_result.execution_time * 1000
         speedup = py_time / cpp_time if cpp_time > 0 else float('inf')
         
-        py_per_step = py_result.function_stats['rk4_cpu_sparse']['time_per_step'] * 1e6  # マイクロ秒に変換
-        cpp_per_step = cpp_result.function_stats['rk4_cpu_sparse']['time_per_step'] * 1e6
+        py_per_step = py_result.function_stats['run_python_profile']['time_per_step'] * 1e6  # マイクロ秒に変換
+        cpp_per_step = cpp_result.function_stats['run_cpp_profile']['time_per_step'] * 1e6
         
         print(f"{steps:8d} | {py_time:12.3f} | {cpp_time:12.3f} | {speedup:8.2f}x | {py_per_step:10.2f} | {cpp_per_step:10.2f}")
     

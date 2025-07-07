@@ -9,7 +9,7 @@ from scipy import sparse
 # プロジェクトルートへのパスを追加
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from cpp.rk4_sparse_cpp import rk4_cpu_sparse as rk4_cpu_sparse_cpp
+from python import rk4_cpu_sparse_cpp
 from python.utils import create_test_matrices, create_test_pulse
 from profile_common import (
     PerformanceProfiler,
@@ -26,12 +26,12 @@ def run_cpp_profile(
     Ex: np.ndarray,
     Ey: np.ndarray,
     dt: float,
-    steps: int,
+    return_traj: bool,
     stride: int,
-    verbose: bool = False
+    renorm: bool = False
 ) -> np.ndarray:
     """C++実装のプロファイリングを実行"""
-    return rk4_cpu_sparse_cpp(H0, mux, muy, psi0, Ex, Ey, dt, steps, stride, verbose)
+    return rk4_cpu_sparse_cpp(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
 
 def main():
     """Main function for C++ profiling"""
@@ -47,7 +47,7 @@ def main():
     
     # テストケースの準備
     H0, mux, muy = create_test_matrices(2)  # 2x2行列で開始
-    psi0 = np.array([[1.0 + 0.0j], [0.0 + 0.0j]], dtype=np.complex128)
+    psi0 = np.array([1.0 + 0.0j, 0.0 + 0.0j], dtype=np.complex128)  # 形状を修正
     dt = 0.02
     stride = 1
     
@@ -63,7 +63,7 @@ def main():
         Ex, Ey = create_test_pulse(steps)
         result = profiler.profile_execution(
             run_cpp_profile,
-            H0, mux, muy, psi0, Ex, Ey, dt, steps - 1, stride, False
+            H0, mux, muy, psi0, Ex, Ey, dt, False, stride, False
         )
         
         time_per_step = result.function_stats['run_cpp_profile']['time_per_step'] * 1e6  # マイクロ秒に変換
