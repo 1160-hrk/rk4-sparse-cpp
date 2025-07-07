@@ -1,1 +1,1 @@
-from ._excitation_rk4_sparse import rk4_propagate
+from .rk4_sparse_py import rk4_cpu_sparse

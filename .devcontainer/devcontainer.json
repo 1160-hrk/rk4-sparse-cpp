@@ -1,19 +1,39 @@
 {
     "name": "excitation-rk4-sparse-dev",
     "build": {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "Dockerfile",
+        "context": ".."
     },
     "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "cmake.configureSettings": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "CMAKE_CXX_FLAGS": "-O3 -march=native -ffast-math -flto -funroll-loops",
+            "CMAKE_C_FLAGS": "-O3 -march=native -ffast-math -flto -funroll-loops"
+        },
+        "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+        "C_Cpp.default.cppStandard": "c++17",
+        "C_Cpp.default.intelliSenseMode": "linux-gcc-x64"
     },
     "extensions": [
         "ms-python.python",
         "ms-vscode.cpptools",
-        "ms-vscode.cmake-tools"
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools-extension-pack",
+        "twxs.cmake",
+        "ms-vscode.makefile-tools",
+        "matepek.vscode-catch2-test-adapter",
+        "cschlosser.doxdocgen",
+        "jeff-hykin.better-cpp-syntax",
+        "ms-python.vscode-pylance",
+        "ms-python.pylint",
+        "ms-python.black-formatter"
     ],
-    "forwardPorts": [],
-    "postCreateCommand": {
-        "pip install -e .[dev]",
-        "pip install -r requirements.txt"
-    },
+    "runArgs": [
+        "--cap-add=SYS_PTRACE",
+        "--security-opt",
+        "seccomp=unconfined"
+    ],
+    "remoteUser": "vscode",
+    "forwardPorts": []
 }
