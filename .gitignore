@@ -75,6 +75,7 @@ Thumbs.db
 
 # Project specific
 examples/figures/
+data/
 *.log
 .pytest_cache/
 htmlcov/
