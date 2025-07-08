@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
-project(excitation_rk4_sparse)
+cmake_minimum_required(VERSION 3.15)  # バージョンを上げて新しいPython機能をサポート
+project(excitation_rk4_sparse VERSION 1.0.0)
+
+# CMakeポリシーの設定
+cmake_policy(SET CMP0148 NEW)
 
 # C++17を使用
 set(CMAKE_CXX_STANDARD 17)
@@ -11,11 +14,19 @@ if(OpenMP_CXX_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
+# Pythonを探す
+find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
+
 # pybind11を探す
 find_package(pybind11 REQUIRED)
 
 # Eigenを探す
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+
+# ビルド出力ディレクトリの設定
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(PYTHON_MODULE_OUTPUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python)
+file(MAKE_DIRECTORY ${PYTHON_MODULE_OUTPUT_DIR})
 
 # ソースファイルの指定
 set(SOURCES
@@ -31,6 +42,13 @@ include_directories(
 
 # Python モジュールの作成
 pybind11_add_module(_excitation_rk4_sparse ${SOURCES})
+
+# 出力ディレクトリの設定
+set_target_properties(_excitation_rk4_sparse PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${PYTHON_MODULE_OUTPUT_DIR}
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PYTHON_MODULE_OUTPUT_DIR}
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE ${PYTHON_MODULE_OUTPUT_DIR}
+)
 
 # Eigenをリンク
 target_link_libraries(_excitation_rk4_sparse PRIVATE Eigen3::Eigen)
@@ -48,4 +66,12 @@ elseif(MSVC)
 endif()
 
 # インストール設定
-install(TARGETS _excitation_rk4_sparse DESTINATION python)
+install(TARGETS _excitation_rk4_sparse 
+    LIBRARY DESTINATION python
+    RUNTIME DESTINATION python)  # Windowsの場合のDLL用
+
+# バージョン情報の出力
+message(STATUS "Building ${PROJECT_NAME} version ${PROJECT_VERSION}")
+message(STATUS "Python version: ${Python_VERSION}")
+message(STATUS "pybind11 version: ${pybind11_VERSION}")
+message(STATUS "Output directory: ${PYTHON_MODULE_OUTPUT_DIR}")
