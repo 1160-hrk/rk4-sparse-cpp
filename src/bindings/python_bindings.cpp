@@ -3,7 +3,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
-#include "excitation_rk4_sparse.hpp"
+#include "excitation_rk4_sparse/core.hpp"
 #ifdef _OPENMP
 #include <omp.h>
 #endif

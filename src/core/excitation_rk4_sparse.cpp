@@ -1,4 +1,4 @@
-#include "excitation_rk4_sparse.hpp"
+#include "excitation_rk4_sparse/core.hpp"
 #include <iostream>
 #ifdef _OPENMP
 #include <omp.h>
@@ -126,10 +126,16 @@ Eigen::MatrixXcd rk4_cpu_sparse(
             }
         }
 
-        // データを展開（並列化可能）
-        #pragma omp parallel for schedule(dynamic, 64)
-        for (int i = 0; i < pattern.nonZeros(); ++i) {
-            result[i] = mat.coeff(pi[i], pj[i]);
+        // データを展開（大きな行列の場合のみ並列化）
+        if (pattern.nonZeros() > 10000) {
+            #pragma omp parallel for schedule(static)
+            for (int i = 0; i < pattern.nonZeros(); ++i) {
+                result[i] = mat.coeff(pi[i], pj[i]);
+            }
+        } else {
+            for (int i = 0; i < pattern.nonZeros(); ++i) {
+                result[i] = mat.coeff(pi[i], pj[i]);
+            }
         }
         
         return result;
@@ -153,24 +159,42 @@ Eigen::MatrixXcd rk4_cpu_sparse(
         double ey1 = Ey3[s][0], ey2 = Ey3[s][1], ey4 = Ey3[s][2];
 
         // H1
+        #ifdef DEBUG_PERFORMANCE
         auto update_start = Clock::now();
-        #pragma omp parallel for schedule(dynamic, 64)
-        for (int i = 0; i < nnz; ++i) {
-            H.valuePtr()[i] = H0_data[i] + ex1 * mux_data[i] + ey1 * muy_data[i];
+        #endif
+        if (nnz > 10000) {
+            #pragma omp parallel for schedule(static)
+            for (int i = 0; i < nnz; ++i) {
+                H.valuePtr()[i] = H0_data[i] + ex1 * mux_data[i] + ey1 * muy_data[i];
+            }
+        } else {
+            for (int i = 0; i < nnz; ++i) {
+                H.valuePtr()[i] = H0_data[i] + ex1 * mux_data[i] + ey1 * muy_data[i];
+            }
         }
+        #ifdef DEBUG_PERFORMANCE
         auto update_end = Clock::now();
         current_metrics.matrix_update_time += Duration(update_end - update_start).count();
         current_metrics.matrix_updates++;
+        #endif
 
         // RK4ステップの時間を計測
+        #ifdef DEBUG_PERFORMANCE
         auto rk4_start = Clock::now();
+        #endif
         k1 = cplx(0, -1) * (H * psi);
         buf = psi + 0.5 * dt * k1;
 
         // H2
-        #pragma omp parallel for schedule(dynamic, 64)
-        for (int i = 0; i < nnz; ++i) {
-            H.valuePtr()[i] = H0_data[i] + ex2 * mux_data[i] + ey2 * muy_data[i];
+        if (nnz > 10000) {
+            #pragma omp parallel for schedule(static)
+            for (int i = 0; i < nnz; ++i) {
+                H.valuePtr()[i] = H0_data[i] + ex2 * mux_data[i] + ey2 * muy_data[i];
+            }
+        } else {
+            for (int i = 0; i < nnz; ++i) {
+                H.valuePtr()[i] = H0_data[i] + ex2 * mux_data[i] + ey2 * muy_data[i];
+            }
         }
         k2 = cplx(0, -1) * (H * buf);
         buf = psi + 0.5 * dt * k2;
@@ -180,17 +204,25 @@ Eigen::MatrixXcd rk4_cpu_sparse(
         buf = psi + dt * k3;
 
         // H4
-        #pragma omp parallel for schedule(dynamic, 64)
-        for (int i = 0; i < nnz; ++i) {
-            H.valuePtr()[i] = H0_data[i] + ex4 * mux_data[i] + ey4 * muy_data[i];
+        if (nnz > 10000) {
+            #pragma omp parallel for schedule(static)
+            for (int i = 0; i < nnz; ++i) {
+                H.valuePtr()[i] = H0_data[i] + ex4 * mux_data[i] + ey4 * muy_data[i];
+            }
+        } else {
+            for (int i = 0; i < nnz; ++i) {
+                H.valuePtr()[i] = H0_data[i] + ex4 * mux_data[i] + ey4 * muy_data[i];
+            }
         }
         k4 = cplx(0, -1) * (H * buf);
 
         // 更新
         psi += (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+        #ifdef DEBUG_PERFORMANCE
         auto rk4_end = Clock::now();
         current_metrics.rk4_step_time += Duration(rk4_end - rk4_start).count();
         current_metrics.rk4_steps++;
+        #endif
 
         if (renorm) {
             cplx norm_complex = psi.adjoint() * psi;
@@ -210,10 +242,12 @@ Eigen::MatrixXcd rk4_cpu_sparse(
         out.row(0) = psi;
     }
 
-    // パフォーマンスメトリクスを出力
+    // パフォーマンスメトリクスを出力（デバッグ用）
+    #ifdef DEBUG_PERFORMANCE
     std::cout << "\n=== パフォーマンスメトリクス ===\n";
     std::cout << "行列更新平均時間: " << current_metrics.matrix_update_time / current_metrics.matrix_updates * 1000 << " ms\n";
     std::cout << "RK4ステップ平均時間: " << current_metrics.rk4_step_time / current_metrics.rk4_steps * 1000 << " ms\n";
+    #endif
 
     return out;
 }

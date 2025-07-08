@@ -28,13 +28,13 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(PYTHON_MODULE_OUTPUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python)
 file(MAKE_DIRECTORY ${PYTHON_MODULE_OUTPUT_DIR})
 
-# ソースファイルの指定
+# ソースファイルの指定（新しいパス）
 set(SOURCES
-    src/excitation_rk4_sparse.cpp
-    src/bindings.cpp
+    src/core/excitation_rk4_sparse.cpp
+    src/bindings/python_bindings.cpp
 )
 
-# インクルードディレクトリの設定
+# インクルードディレクトリの設定（新しいパス）
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${EIGEN3_INCLUDE_DIR}
@@ -67,11 +67,15 @@ endif()
 
 # インストール設定
 install(TARGETS _excitation_rk4_sparse 
-    LIBRARY DESTINATION python
-    RUNTIME DESTINATION python)  # Windowsの場合のDLL用
+    LIBRARY DESTINATION python/excitation_rk4_sparse
+    RUNTIME DESTINATION python/excitation_rk4_sparse)  # Windowsの場合のDLL用
 
 # バージョン情報の出力
 message(STATUS "Building ${PROJECT_NAME} version ${PROJECT_VERSION}")
 message(STATUS "Python version: ${Python_VERSION}")
 message(STATUS "pybind11 version: ${pybind11_VERSION}")
 message(STATUS "Output directory: ${PYTHON_MODULE_OUTPUT_DIR}")
+
+# 将来のアルゴリズム追加に備えた設定
+message(STATUS "Source files: ${SOURCES}")
+message(STATUS "Include directories: ${CMAKE_CURRENT_SOURCE_DIR}/include")

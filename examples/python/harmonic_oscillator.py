@@ -9,12 +9,14 @@ Dipole moment: <n|μ|n±1> ∝ √(n + 1)
 import sys
 import os
 import time
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# プロジェクトルートへのパスを追加
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
 
 import numpy as np
 from scipy import sparse
 import matplotlib.pyplot as plt
-from python import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
+from excitation_rk4_sparse import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
 
 def create_ho_matrices(n_levels: int, omega: float = 1.0, hbar: float = 1.0, mu0: float = 1.0):
     """調和振動子のハミルトニアンと双極子モーメント行列を生成
@@ -78,7 +80,7 @@ def create_gaussian_pulse(t: np.ndarray, omega_L: float, t0: float, sigma: float
 
 def main():
     # パラメータ設定
-    n_levels = 40  # 準位数
+    n_levels = 10  # 準位数
     omega = 10.0    # 角振動数
     hbar = 1.0     # プランク定数
     mu0 = 1.0      # 双極子モーメント
@@ -176,7 +178,7 @@ def main():
     plt.legend()
     
     plt.tight_layout()
-    plt.savefig('examples/figures/harmonic_oscillator_results.png')
+    plt.savefig('../../data/results/figures/harmonic_oscillator_results.png')
     plt.close()
     
     # 実装間の差の確認
@@ -196,7 +198,7 @@ def main():
     plt.ylabel('Energy')
     plt.grid(True)
     plt.legend()
-    plt.savefig('examples/figures/harmonic_oscillator_energy.png')
+    plt.savefig('../../data/results/figures/harmonic_oscillator_energy.png')
     plt.close()
     
     # パルス波形の表示
@@ -207,7 +209,7 @@ def main():
     plt.ylabel('Field Amplitude')
     plt.grid(True)
     plt.legend()
-    plt.savefig('examples/figures/harmonic_oscillator_pulse.png')
+    plt.savefig('../../data/results/figures/harmonic_oscillator_pulse.png')
     plt.close()
 
 if __name__ == '__main__':
