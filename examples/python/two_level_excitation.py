@@ -1,12 +1,13 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '../build'))  # ビルドディレクトリを追加
+
+# プロジェクトルートへのパスを追加
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
 
 import numpy as np
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
-from python import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
+from excitation_rk4_sparse import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
 
 
 # シミュレーションパラメータ
@@ -153,7 +154,7 @@ plt.grid(True)
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('examples/figures/two_level_excitation_comparison.png')
+plt.savefig('../../data/results/figures/two_level_excitation_comparison.png')
 plt.close()
 
 # 結果の表示
@@ -197,4 +198,4 @@ print("\nC++ vs Analytical:")
 print(f"Ground state: {max_diff_analytical['cpp']['ground']:.6e}")
 print(f"Excited state: {max_diff_analytical['cpp']['excited']:.6e}")
 
-print("\nPlot saved as 'examples/figures/two_level_excitation_comparison.png'") 
+print("\nPlot saved as '../../data/results/figures/two_level_excitation_comparison.png'") 
