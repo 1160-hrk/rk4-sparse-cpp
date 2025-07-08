@@ -76,6 +76,7 @@ Thumbs.db
 # Project specific - 新しい構造に対応
 data/results/figures/
 data/benchmarks/temp/
+examples/figures/
 *.log
 .pytest_cache/
 htmlcov/

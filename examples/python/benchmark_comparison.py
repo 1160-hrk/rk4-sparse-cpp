@@ -4,11 +4,12 @@ import time
 import numpy as np
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '../build'))
 
-from python import rk4_cpu_sparse_py
-from python import rk4_cpu_sparse_cpp
+# 現在のプロジェクト構造に対応
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../python'))
+
+from excitation_rk4_sparse import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
 
 def create_test_system(dim, num_steps=1000):
     """テストシステムを生成"""
@@ -115,7 +116,7 @@ def plot_results(results, dims):
     plt.grid(True)
     
     plt.tight_layout()
-    plt.savefig('examples/figures/benchmark_results.png')
+    plt.savefig('../../examples/figures/benchmark_results.png')
     plt.close()
 
 def main():
