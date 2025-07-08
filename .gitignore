@@ -73,11 +73,37 @@ build/
 ehthumbs.db
 Thumbs.db
 
-# Project specific
-examples/figures/
+# Project specific - 新しい構造に対応
+data/results/figures/
+data/benchmarks/temp/
 *.log
 .pytest_cache/
 htmlcov/
 .coverage
 coverage.xml
-.tox/ 
+.tox/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+examples/notebooks/.ipynb_checkpoints/
+
+# Documentation build
+docs/_build/
+docs/api/_build/
+
+# Third party (ignore build artifacts but keep source)
+third_party/*/build/
+third_party/*/dist/
+
+# Test results
+test_results/
+*.xml
+
+# Profiling results
+*.prof
+*.pstats
+
+# Temporary files
+*.tmp
+*.temp
+.cache/ 

@@ -1,4 +1,4 @@
-#include "excitation_rk4_sparse.hpp"
+#include "excitation_rk4_sparse/core.hpp"
 #include <iostream>
 #ifdef _OPENMP
 #include <omp.h>
