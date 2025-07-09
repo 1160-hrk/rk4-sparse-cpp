@@ -5,6 +5,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
 
 import numpy as np
+import time
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 from excitation_rk4_sparse import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
@@ -51,6 +52,7 @@ print(f"stride: {stride}")
 
 # Python実装での時間発展を計算
 print("\nRunning Python implementation...")
+start_t = time.perf_counter()
 result_py = rk4_cpu_sparse_py(
     H0, mux, muy,
     Ex, Ey,
@@ -60,8 +62,9 @@ result_py = rk4_cpu_sparse_py(
     stride,
     False,
 )
-
+end_t = time.perf_counter()
 print("Python implementation completed.")
+print(f"Python implementation time: {end_t - start_t} seconds")
 print(f"Result shape (Python): {result_py.shape}")
 
 # CSRフォーマットのデータを取得
@@ -72,6 +75,7 @@ print(f"muy nnz: {muy.nnz}")
 
 # C++実装での時間発展を計算
 print("\nRunning C++ implementation...")
+start_t = time.perf_counter()
 result_cpp = rk4_cpu_sparse_cpp(
     H0, mux, muy,
     Ex, Ey,
@@ -81,8 +85,9 @@ result_cpp = rk4_cpu_sparse_cpp(
     stride,
     False,
 )
-
+end_t = time.perf_counter()
 print("C++ implementation completed.")
+print(f"C++ implementation time: {end_t - start_t} seconds")
 print(f"Result shape (C++): {result_cpp.shape}")
 
 # 基底状態と励起状態の占有数を計算（Python実装）
