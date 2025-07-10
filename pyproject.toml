@@ -1,15 +1,15 @@
 [build-system]
-requires = ["pybind11[global]", "cmake>=3.15", "setuptools>=45", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "pybind11>=2.6.0", "cmake>=3.15", "numpy>=1.20.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "excitation-rk4-sparse"
-version = "1.0.0"
+version = "0.2.0"
 description = "High-performance sparse matrix RK4 solver for quantum excitation dynamics"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Hiroki Tsusaka", email = "tsusaka4research@gmail.com"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -54,10 +54,10 @@ benchmark = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/excitation-rk4-sparse"
-Documentation = "https://excitation-rk4-sparse.readthedocs.io"
-Repository = "https://github.com/yourusername/excitation-rk4-sparse"
-Issues = "https://github.com/yourusername/excitation-rk4-sparse/issues"
+Homepage = "https://github.com/1160-hrk/excitation-rk4-sparse"
+Documentation = "https://github.com/1160-hrk/excitation-rk4-sparse/tree/main/docs"
+Repository = "https://github.com/1160-hrk/excitation-rk4-sparse"
+Issues = "https://github.com/1160-hrk/excitation-rk4-sparse/issues"
 
 [tool.setuptools.packages.find]
 where = ["python"]
