@@ -18,22 +18,8 @@ struct PerformanceMetrics {
     size_t rk4_steps = 0;
 };
 
-// 既存の関数
-Eigen::MatrixXcd rk4_propagate(
-    const Eigen::SparseMatrix<std::complex<double>>& H0,
-    const Eigen::SparseMatrix<std::complex<double>>& mux,
-    const Eigen::SparseMatrix<std::complex<double>>& muy,
-    const Eigen::VectorXcd& psi0,
-    const std::vector<std::vector<double>>& Ex3,
-    const std::vector<std::vector<double>>& Ey3,
-    double dt,
-    int steps,
-    int stride,
-    bool renorm,
-    bool return_traj);
-
 // 新しい関数 - Python APIと互換性のある実装
-Eigen::MatrixXcd rk4_cpu_sparse(
+Eigen::MatrixXcd rk4_sparse_cpp(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
     const Eigen::SparseMatrix<std::complex<double>>& mux,
     const Eigen::SparseMatrix<std::complex<double>>& muy,

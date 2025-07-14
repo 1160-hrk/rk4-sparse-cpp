@@ -9,7 +9,7 @@ from scipy.sparse import csr_matrix
 # プロジェクトルートへのパスを追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
 
-from excitation_rk4_sparse import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
+from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
 
 def simple_two_level_example():
     """簡単な二準位系の例"""
@@ -38,11 +38,11 @@ def simple_two_level_example():
     
     # Python実装
     print("\nRunning Python implementation...")
-    result_py = rk4_cpu_sparse_py(H0, mux, muy, Ex, Ey, psi0, dt*2, True, 1, False)
+    result_py = rk4_sparse_py(H0, mux, muy, Ex, Ey, psi0, dt*2, True, 1, False)
     
     # C++実装
     print("Running C++ implementation...")
-    result_cpp = rk4_cpu_sparse_cpp(H0, mux, muy, Ex, Ey, psi0, dt*2, True, 1, False)
+    result_cpp = rk4_sparse_cpp(H0, mux, muy, Ex, Ey, psi0, dt*2, True, 1, False)
     
     # 結果の表示
     print(f"\nFinal state (Python): [{result_py[-1, 0]:.3f}, {result_py[-1, 1]:.3f}]")

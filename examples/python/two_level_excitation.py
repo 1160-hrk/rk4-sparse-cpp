@@ -4,11 +4,14 @@ import os
 # プロジェクトルートへのパスを追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
 
+savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
+os.makedirs(savepath, exist_ok=True)
+
 import numpy as np
 import time
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
-from excitation_rk4_sparse import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
+from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp, rk4_numba_py
 
 
 # シミュレーションパラメータ
@@ -51,9 +54,30 @@ print(f"dt_E: {dt_E}")
 print(f"stride: {stride}")
 
 # Python実装での時間発展を計算
-print("\nRunning Python implementation...")
+
+print("\nRunning Python-Numba implementation...")
+H0_numba = H0.toarray()
+mux_numba = mux.toarray()
+muy_numba = muy.toarray()
+
 start_t = time.perf_counter()
-result_py = rk4_cpu_sparse_py(
+result_numba = rk4_numba_py(
+    H0_numba, mux_numba, muy_numba,
+    Ex.astype(np.float64), Ey.astype(np.float64),
+    psi0,
+    dt_E*2,
+    True,
+    stride,
+    False,
+)
+end_t = time.perf_counter()
+print("Python-Numba implementation completed.")
+print(f"Python-Numba implementation time: {end_t - start_t} seconds")
+print(f"Result shape (Python-Numba): {result_numba.shape}")
+
+print("\nRunning Python-sparse implementation...")
+start_t = time.perf_counter()
+result_py = rk4_sparse_py(
     H0, mux, muy,
     Ex, Ey,
     psi0,
@@ -63,9 +87,9 @@ result_py = rk4_cpu_sparse_py(
     False,
 )
 end_t = time.perf_counter()
-print("Python implementation completed.")
-print(f"Python implementation time: {end_t - start_t} seconds")
-print(f"Result shape (Python): {result_py.shape}")
+print("Python-sparse implementation completed.")
+print(f"Python-sparse implementation time: {end_t - start_t} seconds")
+print(f"Result shape (Python-sparse): {result_py.shape}")
 
 # CSRフォーマットのデータを取得
 print("\nExtracting CSR format data for C++ implementation...")
@@ -75,8 +99,10 @@ print(f"muy nnz: {muy.nnz}")
 
 # C++実装での時間発展を計算
 print("\nRunning C++ implementation...")
+print("psi0.shape:", psi0.shape)
+print("H0.shape:", H0.shape)
 start_t = time.perf_counter()
-result_cpp = rk4_cpu_sparse_cpp(
+result_cpp = rk4_sparse_cpp(
     H0, mux, muy,
     Ex, Ey,
     psi0,
@@ -159,7 +185,7 @@ plt.grid(True)
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('../../data/results/figures/two_level_excitation_comparison.png')
+plt.savefig(os.path.join(savepath, 'two_level_excitation_comparison.png'))
 plt.close()
 
 # 結果の表示
@@ -203,4 +229,4 @@ print("\nC++ vs Analytical:")
 print(f"Ground state: {max_diff_analytical['cpp']['ground']:.6e}")
 print(f"Excited state: {max_diff_analytical['cpp']['excited']:.6e}")
 
-print("\nPlot saved as '../../data/results/figures/two_level_excitation_comparison.png'") 
+print("\nPlot saved as {}".format(os.path.join(savepath, 'two_level_excitation_comparison.png'))) 

@@ -7,15 +7,16 @@ import numpy as np
 from scipy import sparse
 
 # プロジェクトルートへのパスを追加
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'python'))
 
-from python import rk4_cpu_sparse_py
-from python.utils import create_test_matrices, create_test_pulse
+from rk4_sparse import rk4_sparse_py
+from utils import create_test_matrices, create_test_pulse
 from profile_common import (
     PerformanceProfiler,
     print_system_info,
     print_comparison_results,
-    plot_comparison_metrics
+    plot_comparison_metrics,
+    save_profiling_results
 )
 
 def run_python_profile(
@@ -77,6 +78,10 @@ def main():
     print(f"H0  - Non-zeros: {matrix_stats['H0_nnz']}, Density: {matrix_stats['H0_density']*100:.2f}%")
     print(f"mux - Non-zeros: {matrix_stats['mux_nnz']}, Density: {matrix_stats['mux_density']*100:.2f}%")
     print(f"muy - Non-zeros: {matrix_stats['muy_nnz']}, Density: {matrix_stats['muy_density']*100:.2f}%")
+    
+    # 結果をファイルに保存
+    print("\n=== Saving Results ===")
+    save_profiling_results(profiler, steps_list, output_dir, "python")
     
     print(f"\nResults saved to: {output_dir}")
     return profiler, steps_list, output_dir

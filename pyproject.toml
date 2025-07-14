@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel", "pybind11>=2.6.0", "cmake>=3.15", "nump
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "excitation-rk4-sparse"
+name = "rk4-sparse-cpp"
 version = "0.2.0"
 description = "High-performance sparse matrix RK4 solver for quantum excitation dynamics"
 readme = "README.md"
@@ -27,6 +27,7 @@ classifiers = [
 keywords = ["quantum", "dynamics", "rk4", "sparse", "physics", "simulation"]
 requires-python = ">=3.8"
 dependencies = [
+    "pybind11>=2.6.0",
     "numpy>=1.20.0",
     "scipy>=1.7.0",
     "matplotlib>=3.3.0",
@@ -54,17 +55,17 @@ benchmark = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/1160-hrk/excitation-rk4-sparse"
-Documentation = "https://github.com/1160-hrk/excitation-rk4-sparse/tree/main/docs"
-Repository = "https://github.com/1160-hrk/excitation-rk4-sparse"
-Issues = "https://github.com/1160-hrk/excitation-rk4-sparse/issues"
+Homepage = "https://github.com/1160-hrk/rk4-sparse-cpp"
+Documentation = "https://github.com/1160-hrk/rk4-sparse-cpp/tree/main/docs"
+Repository = "https://github.com/1160-hrk/rk4-sparse-cpp"
+Issues = "https://github.com/1160-hrk/rk4-sparse-cpp/issues"
 
 [tool.setuptools.packages.find]
 where = ["python"]
-include = ["excitation_rk4_sparse*"]
+include = ["rk4_sparse_cpp*"]
 
 [tool.setuptools.package-data]
-excitation_rk4_sparse = ["*.so", "*.pyd"]
+rk4_sparse_cpp = ["*.so", "*.pyd"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

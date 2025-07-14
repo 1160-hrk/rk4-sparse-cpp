@@ -16,7 +16,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python')
 import numpy as np
 from scipy import sparse
 import matplotlib.pyplot as plt
-from excitation_rk4_sparse import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
+from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
+
+savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
+os.makedirs(savepath, exist_ok=True)
 
 def create_ho_matrices(n_levels: int, omega: float = 1.0, hbar: float = 1.0, mu0: float = 1.0):
     """調和振動子のハミルトニアンと双極子モーメント行列を生成
@@ -122,7 +125,7 @@ def main():
     # Python実装での計算
     print("\nRunning Python implementation...")
     start_time = time.time()
-    result_py = rk4_cpu_sparse_py(
+    result_py = rk4_sparse_py(
         H0, mux, muy,
         Ex, Ey,
         psi0,
@@ -137,7 +140,7 @@ def main():
     # C++実装での計算
     print("\nRunning C++ implementation...")
     start_time = time.time()
-    result_cpp = rk4_cpu_sparse_cpp(
+    result_cpp = rk4_sparse_cpp(
         H0, mux, muy,
         Ex, Ey,
         psi0,
@@ -178,7 +181,7 @@ def main():
     plt.legend()
     
     plt.tight_layout()
-    plt.savefig('../../data/results/figures/harmonic_oscillator_results.png')
+    plt.savefig(os.path.join(savepath, 'harmonic_oscillator_results.png'))
     plt.close()
     
     # 実装間の差の確認
@@ -198,7 +201,7 @@ def main():
     plt.ylabel('Energy')
     plt.grid(True)
     plt.legend()
-    plt.savefig('../../data/results/figures/harmonic_oscillator_energy.png')
+    plt.savefig(os.path.join(savepath, 'harmonic_oscillator_energy.png'))
     plt.close()
     
     # パルス波形の表示
@@ -209,7 +212,7 @@ def main():
     plt.ylabel('Field Amplitude')
     plt.grid(True)
     plt.legend()
-    plt.savefig('../../data/results/figures/harmonic_oscillator_pulse.png')
+    plt.savefig(os.path.join(savepath, 'harmonic_oscillator_pulse.png'))
     plt.close()
 
 if __name__ == '__main__':

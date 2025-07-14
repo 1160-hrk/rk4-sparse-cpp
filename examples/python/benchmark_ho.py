@@ -10,14 +10,17 @@ Measures:
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../python'))
 
 import time
 import numpy as np
 from scipy import sparse
 import matplotlib.pyplot as plt
-from python import rk4_cpu_sparse_py, rk4_cpu_sparse_cpp
+from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
 from harmonic_oscillator import create_ho_matrices, create_gaussian_pulse
+
+savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
+os.makedirs(savepath, exist_ok=True)
 
 class HOBenchmark:
     def __init__(self, n_levels: int = 10, omega: float = 10.0):
@@ -65,7 +68,7 @@ class HOBenchmark:
     def run_python(self):
         """Run Python implementation and measure time"""
         start_time = time.time()
-        result = rk4_cpu_sparse_py(
+        result = rk4_sparse_py(
             self.H0, self.mux, self.muy,
             self.Ex, self.Ey,
             self.psi0,
@@ -80,7 +83,7 @@ class HOBenchmark:
     def run_cpp(self):
         """Run C++ implementation and measure time"""
         start_time = time.time()
-        result = rk4_cpu_sparse_cpp(
+        result = rk4_sparse_cpp(
             self.H0, self.mux, self.muy,
             self.Ex, self.Ey,
             self.psi0,
@@ -147,7 +150,7 @@ def plot_results(results):
     plt.grid(True)
     
     plt.tight_layout()
-    plt.savefig('examples/figures/ho_benchmark_results.png')
+    plt.savefig(os.path.join(savepath, 'ho_benchmark_results.png'))
     plt.close()
 
 if __name__ == '__main__':

@@ -42,7 +42,7 @@ Eigen::SparseMatrix<std::complex<double>> build_sparse_matrix_from_scipy(
     return mat;
 }
 
-PYBIND11_MODULE(_excitation_rk4_sparse, m) {
+PYBIND11_MODULE(_rk4_sparse_cpp, m) {
     m.doc() = "Sparse matrix RK4 propagator for excitation dynamics (C++ implementation)";
     
     py::class_<PerformanceMetrics>(m, "PerformanceMetrics")
@@ -51,7 +51,7 @@ PYBIND11_MODULE(_excitation_rk4_sparse, m) {
         .def_readonly("matrix_updates", &PerformanceMetrics::matrix_updates)
         .def_readonly("rk4_steps", &PerformanceMetrics::rk4_steps);
     
-    m.def("rk4_cpu_sparse", [](
+    m.def("rk4_sparse_cpp", [](
         const py::object& H0,
         const py::object& mux,
         const py::object& muy,
@@ -95,7 +95,7 @@ PYBIND11_MODULE(_excitation_rk4_sparse, m) {
         Eigen::Map<const Eigen::VectorXcd> psi0_vec(static_cast<cplx*>(psi0_buf.ptr), psi0_buf.shape[0]);
 
         // rk4_cpu_sparseの呼び出し
-        return rk4_cpu_sparse(
+        return rk4_sparse_cpp(
             H0_mat, mux_mat, muy_mat,
             Ex_vec, Ey_vec,
             psi0_vec,

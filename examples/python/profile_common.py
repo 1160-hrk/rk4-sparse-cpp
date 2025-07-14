@@ -5,8 +5,10 @@ import time
 import psutil
 import tracemalloc
 import multiprocessing
+import json
+import csv
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Callable, List, Dict
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,6 +25,13 @@ class ProfilingResult:
     matrix_stats: dict
     implementation: str  # 実装の種類（'python' or 'cpp'）を追加
     timestamp: datetime = datetime.now()
+    
+    def to_dict(self) -> dict:
+        """結果を辞書形式に変換（JSON保存用）"""
+        result_dict = asdict(self)
+        # datetimeオブジェクトを文字列に変換
+        result_dict['timestamp'] = self.timestamp.isoformat()
+        return result_dict
 
 class PerformanceProfiler:
     """性能プロファイリングを行うクラス"""
@@ -227,3 +236,105 @@ def print_comparison_results(
     print(f"H0  - Non-zeros: {matrix_stats['H0_nnz']}, Density: {matrix_stats['H0_density']*100:.2f}%")
     print(f"mux - Non-zeros: {matrix_stats['mux_nnz']}, Density: {matrix_stats['mux_density']*100:.2f}%")
     print(f"muy - Non-zeros: {matrix_stats['muy_nnz']}, Density: {matrix_stats['muy_density']*100:.2f}%") 
+
+def save_profiling_results(
+    profiler: PerformanceProfiler,
+    steps_list: List[int],
+    output_dir: str,
+    implementation_name: str = ""
+):
+    """プロファイリング結果をファイルに保存"""
+    if implementation_name == "":
+        implementation_name = profiler.implementation
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # JSONファイルに保存
+    json_filename = os.path.join(output_dir, f"{implementation_name}_profile_results_{timestamp}.json")
+    results_data = {
+        'implementation': implementation_name,
+        'timestamp': timestamp,
+        'system_info': {
+            'cpu_cores': multiprocessing.cpu_count(),
+            'total_memory_gb': psutil.virtual_memory().total / (1024**3),
+            'available_memory_gb': psutil.virtual_memory().available / (1024**3)
+        },
+        'steps_list': steps_list,
+        'results': [result.to_dict() for result in profiler.results]
+    }
+    
+    with open(json_filename, 'w', encoding='utf-8') as f:
+        json.dump(results_data, f, indent=2, ensure_ascii=False)
+    
+    # CSVファイルに保存
+    csv_filename = os.path.join(output_dir, f"{implementation_name}_profile_results_{timestamp}.csv")
+    with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        # ヘッダー行
+        writer.writerow([
+            'Steps', 'Execution_Time_ms', 'CPU_Usage_percent', 'Memory_Usage_MB',
+            'Thread_Count', 'Memory_Peak_MB', 'Time_Per_Step_us', 'Implementation'
+        ])
+        
+        # データ行
+        for i, result in enumerate(profiler.results):
+            time_per_step = result.function_stats[f'run_{implementation_name}_profile']['time_per_step'] * 1e6
+            writer.writerow([
+                steps_list[i],
+                result.execution_time * 1000,  # ミリ秒に変換
+                result.cpu_usage,
+                result.memory_usage,
+                result.thread_count,
+                result.memory_peak,
+                time_per_step,
+                implementation_name
+            ])
+    
+    print(f"Results saved to:")
+    print(f"  JSON: {json_filename}")
+    print(f"  CSV:  {csv_filename}")
+    
+    return json_filename, csv_filename
+
+def save_comparison_results(
+    python_profiler: PerformanceProfiler,
+    cpp_profiler: PerformanceProfiler,
+    steps_list: List[int],
+    output_dir: str
+):
+    """比較結果をファイルに保存"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # 比較結果のCSVファイル
+    comparison_filename = os.path.join(output_dir, f"comparison_results_{timestamp}.csv")
+    with open(comparison_filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        # ヘッダー行
+        writer.writerow([
+            'Steps', 'Python_Time_ms', 'Cpp_Time_ms', 'Speedup',
+            'Python_Time_Per_Step_us', 'Cpp_Time_Per_Step_us',
+            'Python_CPU_percent', 'Cpp_CPU_percent',
+            'Python_Memory_MB', 'Cpp_Memory_MB'
+        ])
+        
+        # データ行
+        for i, steps in enumerate(steps_list):
+            py_result = python_profiler.results[i]
+            cpp_result = cpp_profiler.results[i]
+            
+            py_time = py_result.execution_time * 1000
+            cpp_time = cpp_result.execution_time * 1000
+            speedup = py_time / cpp_time if cpp_time > 0 else float('inf')
+            
+            py_per_step = py_result.function_stats['run_python_profile']['time_per_step'] * 1e6
+            cpp_per_step = cpp_result.function_stats['run_cpp_profile']['time_per_step'] * 1e6
+            
+            writer.writerow([
+                steps, py_time, cpp_time, speedup,
+                py_per_step, cpp_per_step,
+                py_result.cpu_usage, cpp_result.cpu_usage,
+                py_result.memory_usage, cpp_result.memory_usage
+            ])
+    
+    print(f"Comparison results saved to: {comparison_filename}")
+    return comparison_filename 

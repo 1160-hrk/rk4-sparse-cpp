@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)  # バージョンを上げて新しいPython機能をサポート
-project(excitation_rk4_sparse VERSION 1.0.0)
+project(rk4_sparse_cpp VERSION 1.0.0)
 
 # CMakeポリシーの設定
 cmake_policy(SET CMP0148 NEW)
@@ -41,34 +41,34 @@ include_directories(
 )
 
 # Python モジュールの作成
-pybind11_add_module(_excitation_rk4_sparse ${SOURCES})
+pybind11_add_module(_rk4_sparse_cpp ${SOURCES})
 
 # 出力ディレクトリの設定
-set_target_properties(_excitation_rk4_sparse PROPERTIES
+set_target_properties(_rk4_sparse_cpp PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${PYTHON_MODULE_OUTPUT_DIR}
     LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PYTHON_MODULE_OUTPUT_DIR}
     LIBRARY_OUTPUT_DIRECTORY_RELEASE ${PYTHON_MODULE_OUTPUT_DIR}
 )
 
 # Eigenをリンク
-target_link_libraries(_excitation_rk4_sparse PRIVATE Eigen3::Eigen)
+target_link_libraries(_rk4_sparse_cpp PRIVATE Eigen3::Eigen)
 
 # OpenMPをリンク（利用可能な場合）
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(_excitation_rk4_sparse PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(_rk4_sparse_cpp PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
 # 最適化フラグの設定
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(_excitation_rk4_sparse PRIVATE -O3 -march=native)
+    target_compile_options(_rk4_sparse_cpp PRIVATE -O3 -march=native)
 elseif(MSVC)
-    target_compile_options(_excitation_rk4_sparse PRIVATE /O2)
+    target_compile_options(_rk4_sparse_cpp PRIVATE /O2)
 endif()
 
 # インストール設定
-install(TARGETS _excitation_rk4_sparse 
-    LIBRARY DESTINATION python/excitation_rk4_sparse
-    RUNTIME DESTINATION python/excitation_rk4_sparse)  # Windowsの場合のDLL用
+install(TARGETS _rk4_sparse_cpp 
+    LIBRARY DESTINATION python/rk4_sparse_cpp
+    RUNTIME DESTINATION python/rk4_sparse_cpp)  # Windowsの場合のDLL用
 
 # バージョン情報の出力
 message(STATUS "Building ${PROJECT_NAME} version ${PROJECT_VERSION}")

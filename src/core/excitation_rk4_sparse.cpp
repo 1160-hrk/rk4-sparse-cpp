@@ -28,7 +28,7 @@ std::vector<std::vector<double>> field_to_triplets(const Eigen::VectorXd& field)
 }
 
 // rk4_cpu_sparse実装
-Eigen::MatrixXcd rk4_cpu_sparse(
+Eigen::MatrixXcd rk4_sparse_cpp(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
     const Eigen::SparseMatrix<std::complex<double>>& mux,
     const Eigen::SparseMatrix<std::complex<double>>& muy,

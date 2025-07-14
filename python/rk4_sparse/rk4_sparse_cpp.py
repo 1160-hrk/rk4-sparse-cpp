@@ -2,19 +2,19 @@
 
 import numpy as np
 from scipy import sparse
-from ._excitation_rk4_sparse import rk4_cpu_sparse_cpp
+from ._rk4_sparse_cpp import rk4_sparse_cpp as rk4
 
-def rk4_cpu_sparse(
+def rk4_sparse_cpp(
     H0: sparse.csr_matrix,
     mux: sparse.csr_matrix,
     muy: sparse.csr_matrix,
-    psi0: np.ndarray,
     Ex: np.ndarray,
     Ey: np.ndarray,
+    psi0: np.ndarray,
     dt: float,
-    steps: int,
+    return_traj: bool,
     stride: int = 1,
-    verbose: bool = False
+    renorm: bool = False
 ) -> np.ndarray:
     """RK4法による時間発展計算（C++実装）
     
@@ -45,17 +45,21 @@ def rk4_cpu_sparse(
     if H0.shape != mux.shape or H0.shape != muy.shape:
         raise ValueError("All matrices must have the same shape")
     if H0.shape[0] != H0.shape[1]:
-        raise ValueError("Matrices must be square")
+        raise ValueError("Matrices must be square: H0.shape[0] = {}, H0.shape[1] = {}".format(H0.shape[0], H0.shape[1]))
     if psi0.shape[0] != H0.shape[0]:
-        raise ValueError("Initial state dimension must match matrix dimension")
+        raise ValueError("Initial state dimension must match matrix dimension: psi0.shape[0] = {}, H0.shape[0] = {}".format(psi0.shape[0], H0.shape[0]))
     if len(Ex) != len(Ey):
-        raise ValueError("Electric field arrays must have the same length")
+        raise ValueError("Electric field arrays must have the same length: len(Ex) = {}, len(Ey) = {}".format(len(Ex), len(Ey)))
     
     # C++実装を呼び出し
-    return rk4_cpu_sparse_cpp(
-        H0.data, H0.indices, H0.indptr,
-        mux.data, mux.indices, mux.indptr,
-        muy.data, muy.indices, muy.indptr,
-        psi0, Ex, Ey, dt, steps, stride,
-        verbose
+    return rk4(
+        H0,
+        mux,
+        muy,
+        Ex, Ey,
+        psi0,
+        dt,
+        return_traj,
+        stride,
+        renorm,
     ) 

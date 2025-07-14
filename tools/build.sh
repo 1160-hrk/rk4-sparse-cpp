@@ -73,8 +73,8 @@ cmake --build . -j$(nproc) || {
 
 # ライブラリファイルの検索とコピー
 echo "ライブラリファイルをPythonパッケージにコピー中..."
-MODULE_PATH="lib/python/_excitation_rk4_sparse*.so"
-SO_FILES=$(find . -name "_excitation_rk4_sparse*.so" -type f)
+MODULE_PATH="lib/python/_rk4_sparse_cpp*.so"
+SO_FILES=$(find . -name "_rk4_sparse_cpp*.so" -type f)
 
 if [ -z "$SO_FILES" ]; then
     echo "エラー: .soファイルが見つかりません"
@@ -84,12 +84,12 @@ if [ -z "$SO_FILES" ]; then
 fi
 
 # Pythonパッケージディレクトリが存在することを確認
-mkdir -p ../python/excitation_rk4_sparse
+mkdir -p ../python/rk4_sparse
 
 # 見つかった.soファイルをすべてコピー
 for SO_FILE in $SO_FILES; do
     echo "コピー中: $SO_FILE"
-    cp "$SO_FILE" ../python/excitation_rk4_sparse/
+    cp "$SO_FILE" ../python/rk4_sparse/
 done
 
 echo "ビルド成功！"
@@ -103,12 +103,12 @@ fi
 
 # 最終確認
 echo "Pythonパッケージディレクトリの内容:"
-ls -la ../python/excitation_rk4_sparse/
+ls -la ../python/rk4_sparse/
 
 # 新しい構造のメッセージ
 echo ""
 echo "新しいディレクトリ構造でのビルドが完了しました。"
 echo "アルゴリズムの追加は以下の場所に行ってください："
-echo "  - C++実装: src/core/algorithms/"
-echo "  - ヘッダー: include/excitation_rk4_sparse/algorithms/"
+echo "  - C++実装: src/core/"
+echo "  - ヘッダー: include/excitation_rk4_sparse/"
 echo "  - Pythonバインディング: src/bindings/python_bindings.cpp" 

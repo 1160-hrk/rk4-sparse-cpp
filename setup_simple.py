@@ -19,18 +19,18 @@ def read_requirements():
     return requirements
 
 setup(
-    name='excitation-rk4-sparse',
+    name='rk4-sparse-cpp',
     version='0.2.0',
     author='Hiroki Tsusaka',
     author_email='tsusaka4research@gmail.com',
     description='High-performance sparse matrix RK4 solver for quantum excitation dynamics',
     long_description=read_readme(),
     long_description_content_type='text/markdown',
-    url='https://github.com/1160-hrk/excitation-rk4-sparse',
+    url='https://github.com/1160-hrk/rk4-sparse-cpp',
     project_urls={
-        'Bug Reports': 'https://github.com/1160-hrk/excitation-rk4-sparse/issues',
-        'Source': 'https://github.com/1160-hrk/excitation-rk4-sparse',
-        'Documentation': 'https://github.com/1160-hrk/excitation-rk4-sparse/tree/main/docs',
+        'Bug Reports': 'https://github.com/1160-hrk/rk4-sparse-cpp/issues',
+        'Source': 'https://github.com/1160-hrk/rk4-sparse-cpp',
+        'Documentation': 'https://github.com/1160-hrk/rk4-sparse-cpp/tree/main/docs',
     },
     packages=find_packages(where='python'),
     package_dir={'': 'python'},

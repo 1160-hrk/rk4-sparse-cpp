@@ -5,7 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import numpy as np
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
-from python import rk4_cpu_sparse
+from python import rk4_sparse
 import time
 import cProfile
 import pstats
