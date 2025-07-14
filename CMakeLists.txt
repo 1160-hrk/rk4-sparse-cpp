@@ -22,7 +22,14 @@ endif()
 find_package(pybind11 REQUIRED)
 
 # Eigenを探す
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 3.3 QUIET NO_MODULE)
+if(NOT Eigen3_FOUND)
+  message(STATUS "Eigen3 not found, using bundled copy")
+  set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen")
+  add_library(Eigen3::Eigen INTERFACE)
+  target_include_directories(Eigen3::Eigen INTERFACE ${EIGEN3_INCLUDE_DIR})
+endif()
+
 
 
 # ソースファイルの指定（新しいパス）
