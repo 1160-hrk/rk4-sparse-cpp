@@ -12,16 +12,43 @@ namespace py = pybind11;
 using namespace excitation_rk4_sparse;
 using cplx = std::complex<double>;
 
+// 共通ユーティリティ関数
+namespace detail {
+    inline void ensure_vector_1d(const py::buffer_info& buf,
+                                 const char* name) {
+        if (buf.ndim != 1)
+            throw py::value_error(std::string(name) + " must be 1-D");
+    }
+    inline void ensure_positive(double v, const char* name) {
+        if (v <= 0.0)
+            throw py::value_error(std::string(name) + " must be > 0");
+    }
+    inline void ensure_positive(int v, const char* name) {
+        if (v <= 0)
+            throw py::value_error(std::string(name) + " must be > 0");
+    }
+}  // namespace detail
+
 // CSRデータからEigenの疎行列を構築するヘルパー関数
 Eigen::SparseMatrix<std::complex<double>> build_sparse_matrix_from_scipy(
     const py::object& scipy_sparse_matrix)
 {
+    /* ★ 型チェックを強化：isspmatrix_csr を呼び出す */
+    if (!py::module_::import("scipy.sparse").attr("isspmatrix_csr")(scipy_sparse_matrix)
+            .cast<bool>())
+        throw py::type_error("matrix must be scipy.sparse.csr_matrix");
+
     // scipy.sparseの行列からデータを取得
     py::array_t<std::complex<double>> data = scipy_sparse_matrix.attr("data").cast<py::array_t<std::complex<double>>>();
     py::array_t<int> indices = scipy_sparse_matrix.attr("indices").cast<py::array_t<int>>();
     py::array_t<int> indptr = scipy_sparse_matrix.attr("indptr").cast<py::array_t<int>>();
     int rows = scipy_sparse_matrix.attr("shape").attr("__getitem__")(0).cast<int>();
     int cols = scipy_sparse_matrix.attr("shape").attr("__getitem__")(1).cast<int>();
+
+    /* ★ indptr[-1] と data.size を検証 */
+    if (indptr.size() != rows + 1 ||
+        indptr.at(indptr.size() - 1) != data.size())
+        throw py::value_error("inconsistent CSR structure");
 
     // Eigen形式の疎行列を構築
     Eigen::SparseMatrix<std::complex<double>> mat(rows, cols);
@@ -55,9 +82,12 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
         const py::object& H0,
         const py::object& mux,
         const py::object& muy,
-        py::array_t<double> Ex,
-        py::array_t<double> Ey,
-        py::array_t<cplx> psi0,
+        py::array_t<double,
+            py::array::c_style | py::array::forcecast> Ex,
+        py::array_t<double,
+            py::array::c_style | py::array::forcecast> Ey,
+        py::array_t<cplx,
+            py::array::c_style | py::array::forcecast> psi0,
         double dt,
         bool return_traj,
         int stride,

@@ -7,10 +7,10 @@ import numpy as np
 from scipy import sparse
 
 # プロジェクトルートへのパスを追加
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'python'))
-
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'python'))
+print(sys.path)
 from rk4_sparse import rk4_sparse_py
-from utils import create_test_matrices, create_test_pulse
+from rk4_sparse import create_test_matrices, create_test_pulse
 from profile_common import (
     PerformanceProfiler,
     print_system_info,
@@ -32,7 +32,7 @@ def run_python_profile(
     renorm: bool = False
 ) -> np.ndarray:
     """Python実装のプロファイリングを実行"""
-    return rk4_cpu_sparse_py(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
+    return rk4_sparse_py(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
 
 def main():
     """Main function for Python profiling"""
