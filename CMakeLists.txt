@@ -25,9 +25,17 @@ find_package(pybind11 REQUIRED)
 find_package(Eigen3 3.3 QUIET NO_MODULE)
 if(NOT Eigen3_FOUND)
   message(STATUS "Eigen3 not found, using bundled copy")
-  set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen")
-  add_library(Eigen3::Eigen INTERFACE)
-  target_include_directories(Eigen3::Eigen INTERFACE ${EIGEN3_INCLUDE_DIR})
+
+  set(EIGEN3_INCLUDE_DIR
+      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen")
+
+  # 1) 正式ターゲット名（コロンなし）を作る
+  add_library(_eigen_interface INTERFACE)
+  target_include_directories(_eigen_interface
+      INTERFACE ${EIGEN3_INCLUDE_DIR})
+
+  # 2) 公式名 "Eigen3::Eigen" へ ALIAS を張る
+  add_library(Eigen3::Eigen ALIAS _eigen_interface)
 endif()
 
 
@@ -39,9 +47,9 @@ set(SOURCES
 )
 
 # インクルードディレクトリの設定（新しいパス）
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${EIGEN3_INCLUDE_DIR}
+target_include_directories(_rk4_sparse_cpp
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # Python モジュールの作成
