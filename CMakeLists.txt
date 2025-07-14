@@ -23,10 +23,6 @@ find_package(pybind11 REQUIRED)
 # Eigenを探す
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
-# ビルド出力ディレクトリの設定
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(PYTHON_MODULE_OUTPUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python)
-file(MAKE_DIRECTORY ${PYTHON_MODULE_OUTPUT_DIR})
 
 # ソースファイルの指定（新しいパス）
 set(SOURCES
@@ -41,14 +37,7 @@ include_directories(
 )
 
 # Python モジュールの作成
-pybind11_add_module(_rk4_sparse_cpp ${SOURCES})
-
-# 出力ディレクトリの設定
-set_target_properties(_rk4_sparse_cpp PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${PYTHON_MODULE_OUTPUT_DIR}
-    LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PYTHON_MODULE_OUTPUT_DIR}
-    LIBRARY_OUTPUT_DIRECTORY_RELEASE ${PYTHON_MODULE_OUTPUT_DIR}
-)
+pybind11_add_module(_rk4_sparse_cpp MODULE ${SOURCES})
 
 # Eigenをリンク
 target_link_libraries(_rk4_sparse_cpp PRIVATE Eigen3::Eigen)
@@ -66,15 +55,14 @@ elseif(MSVC)
 endif()
 
 # インストール設定
-install(TARGETS _rk4_sparse_cpp 
-    LIBRARY DESTINATION python/rk4_sparse_cpp
-    RUNTIME DESTINATION python/rk4_sparse_cpp)  # Windowsの場合のDLL用
+install(TARGETS _rk4_sparse_cpp
+    LIBRARY DESTINATION rk4_sparse          # Unix (.so)
+    RUNTIME DESTINATION rk4_sparse)         # Windows (.pyd/.dll)
 
 # バージョン情報の出力
 message(STATUS "Building ${PROJECT_NAME} version ${PROJECT_VERSION}")
 message(STATUS "Python version: ${Python_VERSION}")
 message(STATUS "pybind11 version: ${pybind11_VERSION}")
-message(STATUS "Output directory: ${PYTHON_MODULE_OUTPUT_DIR}")
 
 # 将来のアルゴリズム追加に備えた設定
 message(STATUS "Source files: ${SOURCES}")

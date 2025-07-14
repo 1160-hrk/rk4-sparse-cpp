@@ -12,6 +12,7 @@ import time
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp, rk4_numba_py
+from rk4_sparse._rk4_sparse_cpp import rk4_sparse_cpp as rk4_sparse_cpp_pybind11
 
 
 # シミュレーションパラメータ
@@ -102,7 +103,7 @@ print("\nRunning C++ implementation...")
 print("psi0.shape:", psi0.shape)
 print("H0.shape:", H0.shape)
 start_t = time.perf_counter()
-result_cpp = rk4_sparse_cpp(
+result_cpp = rk4_sparse_cpp_pybind11(
     H0, mux, muy,
     Ex, Ey,
     psi0,

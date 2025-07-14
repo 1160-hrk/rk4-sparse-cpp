@@ -1,10 +1,14 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "pybind11>=2.6.0", "cmake>=3.15", "numpy>=1.20.0"]
-build-backend = "setuptools.build_meta"
+requires = [
+    "scikit-build-core>=0.8",
+    "pybind11>=2.6.0",
+    "numpy>=1.20.0"
+]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "rk4-sparse-cpp"
-version = "0.2.0"
+version = "0.2.1"
 description = "High-performance sparse matrix RK4 solver for quantum excitation dynamics"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -62,7 +66,7 @@ Issues = "https://github.com/1160-hrk/rk4-sparse-cpp/issues"
 
 [tool.setuptools.packages.find]
 where = ["python"]
-include = ["rk4_sparse_cpp*"]
+include = ["rk4_sparse*"]
 
 [tool.setuptools.package-data]
 rk4_sparse_cpp = ["*.so", "*.pyd"]
@@ -122,3 +126,9 @@ module = [
     "numpy.*",
 ]
 ignore_missing_imports = true 
+
+[tool.scikit-build]
+# wheel 内に取り込む「パッケージ(=フォルダ)」を列挙
+wheel.packages = ["python/rk4_sparse"]
+# （任意）最低限必要な CMake のバージョン
+cmake.minimum-version = "3.15"
