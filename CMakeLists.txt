@@ -46,14 +46,13 @@ set(SOURCES
     src/bindings/python_bindings.cpp
 )
 
-# インクルードディレクトリの設定（新しいパス）
-target_include_directories(_rk4_sparse_cpp
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-# Python モジュールの作成
+# 1) まずモジュール(target)を作る
 pybind11_add_module(_rk4_sparse_cpp MODULE ${SOURCES})
+
+# 2) そのあとで include / コンパイルオプション / link を追加
+target_include_directories(_rk4_sparse_cpp
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 # Eigenをリンク
 target_link_libraries(_rk4_sparse_cpp PRIVATE Eigen3::Eigen)

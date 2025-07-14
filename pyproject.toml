@@ -130,4 +130,4 @@ ignore_missing_imports = true
 [tool.scikit-build]
 # wheel 内に取り込む「パッケージ(=フォルダ)」を列挙
 wheel.packages = ["python/rk4_sparse"]
-cmake.version = "3.15"
+cmake.version = ">=3.15"
