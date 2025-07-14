@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "rk4-sparse-cpp"
-version = "0.2.1"
+version = "0.2.2"
 description = "High-performance sparse matrix RK4 solver for quantum excitation dynamics"
 readme = "README.md"
 license = {file = "LICENSE"}
