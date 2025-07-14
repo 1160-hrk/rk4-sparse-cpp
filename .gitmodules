@@ -1,0 +1,6 @@
+[submodule "third_party/eigen"]
+    path = third_party/eigen
+    url = https://gitlab.com/libeigen/eigen.git
+    # ↓ブランチ追従なら branch = 3.4、タグ固定なら行を削除
+    #branch = 3.4
+    shallow = true
