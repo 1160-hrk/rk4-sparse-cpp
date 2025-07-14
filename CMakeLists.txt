@@ -15,7 +15,8 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 # Pythonを探す
-find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+message(STATUS "Using Python3 executable: ${Python3_EXECUTABLE}")
 
 # pybind11を探す
 find_package(pybind11 REQUIRED)

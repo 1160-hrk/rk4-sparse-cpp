@@ -25,7 +25,9 @@ jobs:
         run: pip install cibuildwheel==2.23.3
 
       - name: Build wheels
-        run: cibuildwheel --output-dir dist
+        run: |
+          export CIBW_BEFORE_BUILD="yum install -y python3-devel"
+          cibuildwheel --output-dir dist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
