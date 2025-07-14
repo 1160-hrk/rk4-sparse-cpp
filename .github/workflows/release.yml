@@ -26,9 +26,6 @@ jobs:
 
       - name: Build wheels
         env:
-          CIBW_BEFORE_BUILD: >
-            yum install -y epel-release &&
-            yum install -y python3-devel eigen3-devel
           CIBW_ARCHS_LINUX: x86_64
           CIBW_SKIP: "pp*"
         run: cibuildwheel --output-dir dist
