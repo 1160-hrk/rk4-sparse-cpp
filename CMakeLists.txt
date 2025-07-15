@@ -6,11 +6,9 @@ cmake_minimum_required(VERSION 3.15)
 # ---------------------------------------------------------------------------
 cmake_policy(SET CMP0148 NEW)
 
-if(DEFINED SKBUILD_PROJECT_VERSION)
-  project(${SKBUILD_PROJECT_NAME} VERSION ${SKBUILD_PROJECT_VERSION} LANGUAGES CXX)
-else()                               # pip install . など Git 情報が無い場合の保険
-  project(rk4_sparse_cpp VERSION 0.0.0 LANGUAGES CXX)
-endif()
+project(${SKBUILD_PROJECT_NAME}
+        VERSION ${SKBUILD_PROJECT_VERSION}
+        LANGUAGES CXX)
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +49,7 @@ endif()
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/version.hpp.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/excitation_rk4_sparse/version.hpp.in
     ${CMAKE_CURRENT_BINARY_DIR}/generated/version.hpp
     @ONLY
 )
