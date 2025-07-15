@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)  # バージョンを上げて新しいPython機能をサポート
-project(rk4_sparse_cpp VERSION 1.0.0)
+project(rk4_sparse_cpp VERSION 0.2.4)
 
 # CMakeポリシーの設定
 cmake_policy(SET CMP0148 NEW)
