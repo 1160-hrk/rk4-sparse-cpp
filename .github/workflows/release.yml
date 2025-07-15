@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 60      # 保険：無限ループ防止
+    timeout-minutes: 60
 
     steps:
     # -----------------------------------------------------------------------
@@ -19,7 +19,7 @@ jobs:
       run: echo "PKG_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
     # -----------------------------------------------------------------------
-    # 1. ソース & サブモジュール取得（タグ必須：setuptools-scm 用）
+    # 1. ソース & サブモジュール取得
     # -----------------------------------------------------------------------
     - name: Checkout code
       uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
         fetch-tags: true
 
     # -----------------------------------------------------------------------
-    # 2. ホスト Python（キャッシュ付き）
+    # 2. ホスト Python
     # -----------------------------------------------------------------------
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
@@ -58,22 +58,19 @@ jobs:
     # -----------------------------------------------------------------------
     - name: Build wheels
       env:
-        # ---------- version injection ----------
-        PKG_VERSION: ${{ env.PKG_VERSION }}
-        CIBW_ENVIRONMENT: |
-          SETUPTOOLS_SCM_PRETEND_VERSION=${PKG_VERSION}
+        # 実値を直接埋め込む（← ここがキモ）
+        CIBW_ENVIRONMENT: "SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PKG_VERSION }}"
         # 対応アーキテクチャ
         CIBW_ARCHS_LINUX: "x86_64 aarch64"
-        # Python 3.9+ のみ（3.8 以下 & PyPy はスキップ）
+        # Python 3.9+ のみ
         CIBW_SKIP: "cp36-* cp37-* cp38-* pp*"
-        # ログ詳細
-        CIBW_BUILD_VERBOSITY: "1"
-        # ビルド並列度
-        CIBW_PARALLEL: "2"
         # manylinux 2.28 ベース
         CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
         CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux_2_28"
-        # ビルド前に依存ライブラリを固定
+        # ログ詳細・並列度
+        CIBW_BUILD_VERBOSITY: "1"
+        CIBW_PARALLEL: "2"
+        # ビルド前 hook
         CIBW_BEFORE_BUILD: |
           pip install -U pip
           pip install "numpy~=2.0" "pybind11>=3.0"
