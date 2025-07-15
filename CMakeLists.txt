@@ -4,10 +4,8 @@ cmake_minimum_required(VERSION 3.15)
 # ---------------------------------------------------------------------------
 # 0. バージョンを単一情報源に (CI から -DPROJECT_VERSION=... で上書き可)
 # ---------------------------------------------------------------------------
-if(DEFINED ENV{SKBUILD_PROJECT_VERSION})
-  set(PROJECT_VERSION "$ENV{SKBUILD_PROJECT_VERSION}")
-else()
-  set(PROJECT_VERSION "0.0.0-dev")    # 手動ビルド時のデフォルト
+if(NOT DEFINED PROJECT_VERSION)
+  set(PROJECT_VERSION "0.0.0")
 endif()
 
 project(rk4_sparse_cpp VERSION ${PROJECT_VERSION} LANGUAGES CXX)

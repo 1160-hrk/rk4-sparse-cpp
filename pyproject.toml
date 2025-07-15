@@ -92,7 +92,7 @@ wheel.packages = ["python/rk4_sparse"]
 cmake.version  = ">=3.15"
 
 [tool.scikit-build.cmake.define]
-PROJECT_VERSION = "{project_version}"   # ★ 正しいプレースホルダ
+PROJECT_VERSION = "{version}"   # ★ 正しいプレースホルダ
 
 # ---------------------------------------------------------------------------
 # 4. setuptools サブパッケージ / データ
