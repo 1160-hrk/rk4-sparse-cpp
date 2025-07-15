@@ -13,17 +13,17 @@ jobs:
 
     steps:
     # -----------------------------------------------------------------------
-    # 1. リポジトリ & サブモジュールを取得（タグが必須：setuptools-scm）
+    # 1. ソース & サブモジュール取得（タグ必須：setuptools-scm 用）
     # -----------------------------------------------------------------------
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-        fetch-depth: 0        # タグ & 履歴すべて取得
+        fetch-depth: 0
         fetch-tags: true
 
     # -----------------------------------------------------------------------
-    # 2. キャッシュ付き Python セットアップ
+    # 2. ホスト Python（キャッシュ付き）— ここでは 3.11 で任意
     # -----------------------------------------------------------------------
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
@@ -32,18 +32,15 @@ jobs:
         cache: 'pip'
 
     # -----------------------------------------------------------------------
-    # 3. 最新 pip & ビルドツールを準備（ビルド環境）
+    # 3. ビルドツール導入
     # -----------------------------------------------------------------------
     - name: Upgrade pip and install build tools
       run: |
         python -m pip install --upgrade pip
-        pip install build           # sdist 用
-        pip install cibuildwheel==2.23.3
+        pip install build cibuildwheel==2.23.3
 
     # -----------------------------------------------------------------------
-    # 4. (オプション) QEMU を有効化して aarch64 クロスビルド対応
-    #    → cibuildwheel 2.23 以降は自動で QEMU ダウンロードするが、
-    #      GH ホスト上では binfmt_misc を明示登録した方が確実
+    # 4. aarch64 クロスビルド用 QEMU
     # -----------------------------------------------------------------------
     - name: Setup QEMU (for aarch64 wheels)
       uses: docker/setup-qemu-action@v3
@@ -51,33 +48,33 @@ jobs:
         platforms: all
 
     # -----------------------------------------------------------------------
-    # 5. ビルド (wheels: x86_64 + aarch64)  ※scikit-build-core が内部で CMake 実行
-    #    setuptools-scm が Git タグを読んで version 決定 → scikit-build が
-    #    PROJECT_VERSION に伝播 → C++/Python 同期
+    # 5. Wheel ビルド (Python 3.9+ に絞る)
     # -----------------------------------------------------------------------
     - name: Build wheels
       env:
-        # 多アーキテクチャ
+        # 対応アーキテクチャ
         CIBW_ARCHS_LINUX: "x86_64 aarch64"
-        # ビルドログ詳細化
+        # Python 3.8 以下・PyPy をスキップ
+        CIBW_SKIP: "cp36-* cp37-* cp38-* pp*"
+        # ログ詳細
         CIBW_BUILD_VERBOSITY: "1"
-        # aarch64 は cross 最適化が激重なのでジョブ制限
+        # ビルド並列度
         CIBW_PARALLEL: "2"
-        # 最新 manylinux2023 ベースでビルド (glibc 2.17 以降)
+        # manylinux 2.28 (glibc 2.28) ベース
         CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
         CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux_2_28"
-        # ビルド前にライト依存を入れておく例（numpy ヘッダ必須）
-        CIBW_BEFORE_BUILD: "pip install numpy==1.26.*"
+        # NumPy ヘッダー（3.9+ 対応版）を先に入れる
+        CIBW_BEFORE_BUILD: "pip install 'numpy==1.26.*'"
       run: cibuildwheel --output-dir dist
 
     # -----------------------------------------------------------------------
-    # 6. ソース配布 (sdist) も生成
+    # 6. ソース配布 (sdist)
     # -----------------------------------------------------------------------
     - name: Build sdist
       run: python -m build --sdist -o dist
 
     # -----------------------------------------------------------------------
-    # 7. (任意) アーティファクトとして残す
+    # 7. ビルド成果物をアーティファクトとして保存（任意）
     # -----------------------------------------------------------------------
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -86,14 +83,10 @@ jobs:
         path: dist
 
     # -----------------------------------------------------------------------
-    # 8. PyPI へアップロード
-    #    セキュアにするため “trusted publisher” 連携推奨だが、
-    #    従来トークン方式の場合は PYPI_API_TOKEN をリポジトリシークレットへ
+    # 8. PyPI アップロード
     # -----------------------------------------------------------------------
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
-        # TestPyPI に出したい場合は repo-url を設定
-        # repo-url: https://test.pypi.org/legacy/
         skip-existing: true

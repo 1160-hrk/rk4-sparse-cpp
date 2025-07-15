@@ -15,9 +15,9 @@
   - 疎行列パターンの再利用
 
 ## バージョン情報
-- 現在のバージョン: v0.2.0
+- 現在のバージョン: v0.2.5
 - ステータス: 安定版
-- 最終更新: 2024-01-08
+- 最終更新: 2024-07-15
 - **新機能**: プロジェクト構造の大幅改善、性能問題の解決
 
 ## 必要条件
@@ -30,7 +30,14 @@
 
 ## インストール
 
-### 開発用インストール（推奨）
+### pip install（推奨）
+```bash
+pip install rk4-sparse-cpp
+```
+
+この場合、`rk4_sparse`モジュールがsite-packagesにインストールされます。
+
+### 開発用インストール
 ```bash
 git clone https://github.com/1160-hrk/excitation-rk4-sparse.git
 cd excitation-rk4-sparse
@@ -40,47 +47,51 @@ cd excitation-rk4-sparse
 
 # Pythonパッケージのインストール
 pip install -e .
+
+# または、直接パスを追加して使用
+# sys.path.append('python')
 ```
 
 ### クイックテスト
 ```bash
-# 自動テストの実行
-python tools/test_examples.py
+# 2準位系のテスト
+python examples/python/two_level_excitation.py
+
+# 調和振動子のベンチマーク
+python examples/python/benchmark_ho.py
 ```
 
 ## 使用例
 
 ### 基本的な使用法
 ```python
-from excitation_rk4_sparse import ExcitationRK4Sparse
-from excitation_rk4_sparse.bindings import ExcitationRK4SparseCpp
+# pip installでインストールした場合
+from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
+
+# 開発用インストールの場合
+# import sys
+# import os
+# sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
+# from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
 
 # Python実装
-solver_py = ExcitationRK4Sparse()
-result_py = solver_py.solve(H0, mux, muy, Ex, Ey, psi0, dt, True, stride, False)
+result_py = rk4_sparse_py(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
 
 # C++実装（高速）
-solver_cpp = ExcitationRK4SparseCpp()
-result_cpp = solver_cpp.solve(H0, mux, muy, Ex, Ey, psi0, dt, True, stride, False)
+result_cpp = rk4_sparse_cpp(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
 ```
 
 ### 例題
-すべての例は新しい構造で整理されています：
+すべての例は`examples/python/`ディレクトリにあります：
 
 1. **基本例**
 ```bash
-python examples/basic/example_rk4.py  # 簡単な2準位系
+python examples/python/two_level_excitation.py  # 2準位励起
 ```
 
-2. **量子システム例**
+2. **ベンチマーク**
 ```bash
-python examples/quantum/two_level_excitation.py   # 2準位励起
-python examples/quantum/harmonic_oscillator.py   # 調和振動子
-```
-
-3. **ベンチマーク**
-```bash
-python examples/benchmarks/benchmark_comparison.py
+python examples/python/benchmark_ho.py         # 調和振動子系での比較
 ```
 
 ## ベンチマーク
@@ -88,25 +99,28 @@ python examples/benchmarks/benchmark_comparison.py
 
 1. 実装間の比較
 ```bash
-python examples/benchmark_comparison.py  # 基本的な比較
-python examples/benchmark_ho.py         # 調和振動子系での比較
+python examples/python/benchmark_ho.py         # 調和振動子系での比較
 ```
 
-2. 詳細なプロファイリング
+2. 2準位系のテスト
 ```bash
-python examples/profile_comparison.py   # CPU使用率、メモリ使用量など
+python examples/python/two_level_excitation.py # 2準位励起のテスト
 ```
 
 ## 性能
 
-最新の最適化により期待される高性能を実現：
+最新のベンチマーク結果（2025年7月15日）による高性能を実現：
 
-| システムサイズ | Python [ms] | C++ [ms] | 速度比 |
-|-------------:|------------:|----------:|-------:|
-| 50レベル      | 12.8        | 0.5       | **23.65x** |
-| 100レベル     | 14.5        | 0.9       | **15.69x** |
-| 200レベル     | 17.3        | 1.8       | **9.81x** |
-| 500レベル     | 12.2        | 2.9       | **4.29x** |
+| システムサイズ | scipy.sparse [ms] | numba [ms] | C++ [ms] | C++ vs scipy | C++ vs numba |
+|-------------:|------------------:|-----------:|----------:|-------------:|-------------:|
+| 2レベル       | 11.6              | 0.2        | 0.1       | **110x**     | **2.0x**     |
+| 4レベル       | 10.7              | 0.2        | 0.1       | **116x**     | **2.6x**     |
+| 8レベル       | 11.0              | 0.4        | 0.1       | **75x**      | **2.9x**     |
+| 16レベル      | 10.9              | 1.1        | 0.2       | **53x**      | **5.5x**     |
+| 32レベル      | 11.5              | 3.8        | 0.3       | **34x**      | **11.3x**    |
+| 64レベル      | 12.3              | 13.6       | 0.6       | **20x**      | **22.5x**    |
+| 128レベル     | 13.9              | 55.1       | 1.2       | **12x**      | **46.9x**    |
+| 256レベル     | 17.5              | 230.5      | 2.4       | **7.3x**     | **96.0x**    |
 
 ## 最適化の特徴
 
