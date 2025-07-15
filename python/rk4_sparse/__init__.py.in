@@ -1,0 +1,4 @@
+from importlib import metadata as _md
+
+__version__ = "@PROJECT_VERSION@"
+del _md

@@ -1,14 +1,20 @@
 [build-system]
 requires = [
+    "setuptools>=64",
+    "setuptools_scm[toml]>=7.1",      # ← ★ 追加
     "scikit-build-core>=0.8",
     "pybind11>=2.6.0",
     "numpy>=1.20.0"
 ]
 build-backend = "scikit_build_core.build"
 
+# ---------------------------------------------------------------------------
+# 1. プロジェクトメタデータ
+#    version は Git タグから動的取得
+# ---------------------------------------------------------------------------
 [project]
 name = "rk4-sparse-cpp"
-version = "0.2.4"
+dynamic = ["version"]                # ← ★ version を動的に
 description = "High-performance sparse matrix RK4 solver for quantum excitation dynamics"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -64,6 +70,30 @@ Documentation = "https://github.com/1160-hrk/rk4-sparse-cpp/tree/main/docs"
 Repository = "https://github.com/1160-hrk/rk4-sparse-cpp"
 Issues = "https://github.com/1160-hrk/rk4-sparse-cpp/issues"
 
+# ---------------------------------------------------------------------------
+# 2. setuptools-scm 設定： Git タグから vX.Y.Z を抽出
+#    （好みに応じて version_scheme 等を調整）
+# ---------------------------------------------------------------------------
+[tool.setuptools_scm]
+# 例: v1.2.3 → 1.2.3
+tag_regex = "^v(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+version_scheme = "post-release"
+local_scheme = "no-local-version"
+
+# ---------------------------------------------------------------------------
+# 3. scikit-build-core: wheel 作成時に CMake へバージョンを伝播
+# ---------------------------------------------------------------------------
+[tool.scikit-build]
+wheel.packages = ["python/rk4_sparse"]
+cmake.version = ">=3.15"
+
+# CMake に -DPROJECT_VERSION=<動的バージョン> を渡す
+[tool.scikit-build.cmake.define]
+PROJECT_VERSION = "{version}"
+
+# ---------------------------------------------------------------------------
+# 4. setuptools パッケージ検出 / テスト / フォーマット設定は変更なし
+# ---------------------------------------------------------------------------
 [tool.setuptools.packages.find]
 where = ["python"]
 include = ["rk4_sparse*"]
@@ -88,16 +118,15 @@ addopts = [
 [tool.black]
 line-length = 88
 target-version = ['py38']
-include = '\.pyi?$'
+include = '\\.pyi?$'
 extend-exclude = '''
 /(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
+  \\.eggs
+  | \\.git
+  | \\.hg
+  | \\.mypy_cache
+  | \\.tox
+  | \\.venv
   | build
   | dist
   | third_party
@@ -125,9 +154,4 @@ module = [
     "matplotlib.*",
     "numpy.*",
 ]
-ignore_missing_imports = true 
-
-[tool.scikit-build]
-# wheel 内に取り込む「パッケージ(=フォルダ)」を列挙
-wheel.packages = ["python/rk4_sparse"]
-cmake.version = ">=3.15"
+ignore_missing_imports = true

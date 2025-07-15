@@ -1,84 +1,120 @@
-cmake_minimum_required(VERSION 3.15)  # バージョンを上げて新しいPython機能をサポート
-project(rk4_sparse_cpp VERSION 0.2.4)
+# =============================  CMakeLists.txt  =============================
+cmake_minimum_required(VERSION 3.15)
 
-# CMakeポリシーの設定
+# ---------------------------------------------------------------------------
+# 0. バージョンを単一情報源に (CI から -DPROJECT_VERSION=... で上書き可)
+# ---------------------------------------------------------------------------
+set(PROJECT_VERSION "0.2.4" CACHE STRING "Package version")
+
+project(rk4_sparse_cpp VERSION ${PROJECT_VERSION} LANGUAGES CXX)
+
+# ---------------------------------------------------------------------------
+# 1. CMake ポリシー
+# ---------------------------------------------------------------------------
 cmake_policy(SET CMP0148 NEW)
 
-# C++17を使用
+# ---------------------------------------------------------------------------
+# 2. C++17
+# ---------------------------------------------------------------------------
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# OpenMPを有効化
+# ---------------------------------------------------------------------------
+# 3. OpenMP (任意)
+# ---------------------------------------------------------------------------
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
-# Pythonを探す - > pybind11に任せる
-# find_package(Python3 REQUIRED COMPONENTS Interpreter Module)
-# message(STATUS "Using Python3 executable: ${Python3_EXECUTABLE}")
-
-# pybind11を探す
+# ---------------------------------------------------------------------------
+# 4. pybind11
+# ---------------------------------------------------------------------------
 find_package(pybind11 REQUIRED)
 
-# Eigenを探す
+# ---------------------------------------------------------------------------
+# 5. Eigen (システムに無ければ同梱ヘッダを使用)
+# ---------------------------------------------------------------------------
 find_package(Eigen3 3.3 QUIET NO_MODULE)
 if(NOT Eigen3_FOUND)
-  message(STATUS "Eigen3 not found, using bundled copy")
+    message(STATUS "Eigen3 not found, using bundled copy")
+    set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen")
 
-  set(EIGEN3_INCLUDE_DIR
-      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen")
-
-  # 1) 正式ターゲット名（コロンなし）を作る
-  add_library(_eigen_interface INTERFACE)
-  target_include_directories(_eigen_interface
-      INTERFACE ${EIGEN3_INCLUDE_DIR})
-
-  # 2) 公式名 "Eigen3::Eigen" へ ALIAS を張る
-  add_library(Eigen3::Eigen ALIAS _eigen_interface)
+    add_library(_eigen_interface INTERFACE)
+    target_include_directories(_eigen_interface INTERFACE ${EIGEN3_INCLUDE_DIR})
+    add_library(Eigen3::Eigen ALIAS _eigen_interface)
 endif()
 
+# ---------------------------------------------------------------------------
+# 6. バージョンファイルを自動生成
+# ---------------------------------------------------------------------------
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/version.hpp.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/version.hpp
+    @ONLY
+)
 
-# ソースファイルの指定（新しいパス）
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/python/rk4_sparse/__init__.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/python/rk4_sparse/__init__.py
+    @ONLY
+)
+
+# ---------------------------------------------------------------------------
+# 7. ソースファイル
+# ---------------------------------------------------------------------------
 set(SOURCES
     src/core/excitation_rk4_sparse.cpp
     src/bindings/python_bindings.cpp
 )
 
-# 1) まずモジュール(target)を作る
+# ---------------------------------------------------------------------------
+# 8. 拡張モジュールをビルド
+# ---------------------------------------------------------------------------
 pybind11_add_module(_rk4_sparse_cpp MODULE ${SOURCES})
 
-# 2) そのあとで include / コンパイルオプション / link を追加
 target_include_directories(_rk4_sparse_cpp
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}/generated  # ← version.hpp を含む
 )
 
-# Eigenをリンク
 target_link_libraries(_rk4_sparse_cpp PRIVATE Eigen3::Eigen)
 
-# OpenMPをリンク（利用可能な場合）
 if(OpenMP_CXX_FOUND)
     target_link_libraries(_rk4_sparse_cpp PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-# 最適化フラグの設定
+# ---------------------------------------------------------------------------
+# 9. 最適化フラグ
+# ---------------------------------------------------------------------------
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(_rk4_sparse_cpp PRIVATE -O3 -march=native)
 elseif(MSVC)
     target_compile_options(_rk4_sparse_cpp PRIVATE /O2)
 endif()
 
-# インストール設定
+# ---------------------------------------------------------------------------
+# 10. インストール設定
+# ---------------------------------------------------------------------------
 install(TARGETS _rk4_sparse_cpp
     LIBRARY DESTINATION rk4_sparse          # Unix (.so)
     RUNTIME DESTINATION rk4_sparse)         # Windows (.pyd/.dll)
 
-# バージョン情報の出力
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/python/rk4_sparse/__init__.py
+    DESTINATION rk4_sparse
+)
+
+# ---------------------------------------------------------------------------
+# 11. ビルドログ
+# ---------------------------------------------------------------------------
 message(STATUS "Building ${PROJECT_NAME} version ${PROJECT_VERSION}")
 message(STATUS "Python version: ${Python_VERSION}")
 message(STATUS "pybind11 version: ${pybind11_VERSION}")
-
-# 将来のアルゴリズム追加に備えた設定
 message(STATUS "Source files: ${SOURCES}")
-message(STATUS "Include directories: ${CMAKE_CURRENT_SOURCE_DIR}/include")
+message(STATUS "Include directories: ${CMAKE_CURRENT_SOURCE_DIR}/include; ${CMAKE_CURRENT_BINARY_DIR}/generated")
+
+# =============================  end of file  ===============================
