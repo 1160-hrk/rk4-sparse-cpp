@@ -2,18 +2,14 @@
 cmake_minimum_required(VERSION 3.15)
 
 # ---------------------------------------------------------------------------
-# 0. バージョンを単一情報源に (CI から -DPROJECT_VERSION=... で上書き可)
-# ---------------------------------------------------------------------------
-if(NOT DEFINED PROJECT_VERSION)
-  set(PROJECT_VERSION "0.0.0")
-endif()
-
-project(rk4_sparse_cpp VERSION ${PROJECT_VERSION} LANGUAGES CXX)
-
-# ---------------------------------------------------------------------------
 # 1. CMake ポリシー
 # ---------------------------------------------------------------------------
 cmake_policy(SET CMP0148 NEW)
+
+project(${SKBUILD_PROJECT_NAME}
+        VERSION ${SKBUILD_PROJECT_VERSION}
+        LANGUAGES CXX)
+
 
 # ---------------------------------------------------------------------------
 # 2. C++17
