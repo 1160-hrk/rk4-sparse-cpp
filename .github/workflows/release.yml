@@ -13,6 +13,12 @@ jobs:
 
     steps:
     # -----------------------------------------------------------------------
+    # 0. タグからバージョン文字列を抽出  ★★★ NEW ★★★
+    # -----------------------------------------------------------------------
+    - name: Extract version
+      id: vars
+      run: echo "PKG_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+    # -----------------------------------------------------------------------
     # 1. ソース & サブモジュール取得（タグ必須：setuptools-scm 用）
     # -----------------------------------------------------------------------
     - name: Checkout code
@@ -52,6 +58,11 @@ jobs:
     # -----------------------------------------------------------------------
     - name: Build wheels
       env:
+        # ---------- version injection ----------
+        PKG_VERSION: ${{ env.PKG_VERSION }}                       # NEW
+        CIBW_ENVIRONMENT: |                                       # NEW
+          SETUPTOOLS_SCM_PRETEND_VERSION=${PKG_VERSION}           # NEW
+        CIBW_ENVIRONMENT_PASS_LINUX: SETUPTOOLS_SCM_PRETEND_VERSION  # NEW
         # 対応アーキテクチャ
         CIBW_ARCHS_LINUX: "x86_64 aarch64"
         # Python 3.8 以下・PyPy をスキップ
@@ -73,6 +84,9 @@ jobs:
     # 6. ソース配布 (sdist)
     # -----------------------------------------------------------------------
     - name: Build sdist
+      env:
+        # ---------- version injection ----------
+        SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PKG_VERSION }}    # NEW
       run: python -m build --sdist -o dist
 
     # -----------------------------------------------------------------------
