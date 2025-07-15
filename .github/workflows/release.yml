@@ -1,4 +1,3 @@
-# =========================== .github/workflows/release.yml ===========================
 name: Build and publish to PyPI
 
 on:
@@ -13,11 +12,12 @@ jobs:
 
     steps:
     # -----------------------------------------------------------------------
-    # 0. タグからバージョン文字列を抽出  ★★★ NEW ★★★
+    # 0. タグからバージョン文字列を抽出
     # -----------------------------------------------------------------------
     - name: Extract version
       id: vars
       run: echo "PKG_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
     # -----------------------------------------------------------------------
     # 1. ソース & サブモジュール取得（タグ必須：setuptools-scm 用）
     # -----------------------------------------------------------------------
@@ -29,7 +29,7 @@ jobs:
         fetch-tags: true
 
     # -----------------------------------------------------------------------
-    # 2. ホスト Python（キャッシュ付き）— ここでは 3.11 で任意
+    # 2. ホスト Python（キャッシュ付き）
     # -----------------------------------------------------------------------
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
@@ -54,27 +54,26 @@ jobs:
         platforms: all
 
     # -----------------------------------------------------------------------
-    # 5. Wheel ビルド (Python 3.9+ に絞る)
+    # 5. Wheel ビルド
     # -----------------------------------------------------------------------
     - name: Build wheels
       env:
         # ---------- version injection ----------
-        PKG_VERSION: ${{ env.PKG_VERSION }}                       # NEW
-        CIBW_ENVIRONMENT: |                                       # NEW
-          SETUPTOOLS_SCM_PRETEND_VERSION=${PKG_VERSION}           # NEW
-        CIBW_ENVIRONMENT_PASS_LINUX: SETUPTOOLS_SCM_PRETEND_VERSION  # NEW
+        PKG_VERSION: ${{ env.PKG_VERSION }}
+        CIBW_ENVIRONMENT: |
+          SETUPTOOLS_SCM_PRETEND_VERSION=${PKG_VERSION}
         # 対応アーキテクチャ
         CIBW_ARCHS_LINUX: "x86_64 aarch64"
-        # Python 3.8 以下・PyPy をスキップ
+        # Python 3.9+ のみ（3.8 以下 & PyPy はスキップ）
         CIBW_SKIP: "cp36-* cp37-* cp38-* pp*"
         # ログ詳細
         CIBW_BUILD_VERBOSITY: "1"
         # ビルド並列度
         CIBW_PARALLEL: "2"
-        # manylinux 2.28 (glibc 2.28) ベース
+        # manylinux 2.28 ベース
         CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
         CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux_2_28"
-        # ビルド専用。NumPy 2.x + pybind11 3.x に合わせる
+        # ビルド前に依存ライブラリを固定
         CIBW_BEFORE_BUILD: |
           pip install -U pip
           pip install "numpy~=2.0" "pybind11>=3.0"
@@ -85,12 +84,11 @@ jobs:
     # -----------------------------------------------------------------------
     - name: Build sdist
       env:
-        # ---------- version injection ----------
-        SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PKG_VERSION }}    # NEW
+        SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PKG_VERSION }}
       run: python -m build --sdist -o dist
 
     # -----------------------------------------------------------------------
-    # 7. ビルド成果物をアーティファクトとして保存（任意）
+    # 7. ビルド成果物をアーティファクトとして保存
     # -----------------------------------------------------------------------
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
