@@ -6,9 +6,11 @@ cmake_minimum_required(VERSION 3.15)
 # ---------------------------------------------------------------------------
 cmake_policy(SET CMP0148 NEW)
 
-project(${SKBUILD_PROJECT_NAME}
-        VERSION ${SKBUILD_PROJECT_VERSION}
-        LANGUAGES CXX)
+if(DEFINED SKBUILD_PROJECT_VERSION)
+  project(${SKBUILD_PROJECT_NAME} VERSION ${SKBUILD_PROJECT_VERSION} LANGUAGES CXX)
+else()                               # pip install . など Git 情報が無い場合の保険
+  project(rk4_sparse_cpp VERSION 0.0.0 LANGUAGES CXX)
+endif()
 
 
 # ---------------------------------------------------------------------------
