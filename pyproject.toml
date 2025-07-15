@@ -91,6 +91,8 @@ local_scheme   = "no-local-version"
 wheel.packages = ["python/rk4_sparse"]
 cmake.version  = ">=3.15"
 
+[tool.scikit-build.sdist]
+include = ["include/excitation_rk4_sparse/version.hpp.in", "python/rk4_sparse/__init__.py.in"]
 
 # ---------------------------------------------------------------------------
 # 4. setuptools サブパッケージ / データ
