@@ -59,9 +59,11 @@ jobs:
     - name: Build wheels
       env:
         # パッケージ固有の Pretend Version
+        PKG_VERSION: ${{ env.PKG_VERSION }}
         CIBW_ENVIRONMENT: |
-          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_RK4_SPARSE=${{ env.PKG_VERSION }}
+          SETUPTOOLS_SCM_PRETEND_VERSION=${{ env.PKG_VERSION }}
           SETUPTOOLS_SCM_DEBUG=1
+        CIBW_ENVIRONMENT_PASS_LINUX: SETUPTOOLS_SCM_PRETEND_VERSION
         # 対応アーキテクチャ
         CIBW_ARCHS_LINUX: "x86_64 aarch64"
         # Python 3.9+ のみ
@@ -83,7 +85,7 @@ jobs:
     # -----------------------------------------------------------------------
     - name: Build sdist
       env:
-        SETUPTOOLS_SCM_PRETEND_VERSION_FOR_RK4_SPARSE: ${{ env.PKG_VERSION }}
+        SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.PKG_VERSION }}
         SETUPTOOLS_SCM_DEBUG: 1
       run: python -m build --sdist -o dist
 
