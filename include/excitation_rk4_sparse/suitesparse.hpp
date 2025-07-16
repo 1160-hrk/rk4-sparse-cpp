@@ -1,25 +1,44 @@
 #pragma once
 
-// Eigenの最適化設定
-#define EIGEN_VECTORIZE
-#define EIGEN_DONT_ALIGN_STATICALLY
-
 #include <Eigen/Sparse>
 #include <vector>
 #include <complex>
+#include <chrono>
 
 namespace excitation_rk4_sparse {
 
-// キャッシュ性能の分析用構造体
-struct PerformanceMetrics {
+// 基本版SuiteSparse用のパフォーマンスメトリクス
+struct SuiteSparsePerformanceMetrics {
     double matrix_update_time = 0.0;
     double rk4_step_time = 0.0;
+    double sparse_solve_time = 0.0;
     size_t matrix_updates = 0;
     size_t rk4_steps = 0;
+    size_t sparse_solves = 0;
 };
 
-// Eigen版のRK4実装（関数名を明確化）
-Eigen::MatrixXcd rk4_sparse_eigen(
+// 最適化版SuiteSparse用のパフォーマンスメトリクス
+struct SuiteSparseOptimizedPerformanceMetrics {
+    double matrix_update_time = 0.0;
+    double rk4_step_time = 0.0;
+    double sparse_solve_time = 0.0;
+    size_t matrix_updates = 0;
+    size_t rk4_steps = 0;
+    size_t sparse_solves = 0;
+};
+
+// 高速版SuiteSparse用のパフォーマンスメトリクス
+struct SuiteSparseFastPerformanceMetrics {
+    double matrix_update_time = 0.0;
+    double rk4_step_time = 0.0;
+    double sparse_solve_time = 0.0;
+    size_t matrix_updates = 0;
+    size_t rk4_steps = 0;
+    size_t sparse_solves = 0;
+};
+
+// 基本版SuiteSparse-MKL版のRK4実装
+Eigen::MatrixXcd rk4_sparse_suitesparse(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
     const Eigen::SparseMatrix<std::complex<double>>& mux,
     const Eigen::SparseMatrix<std::complex<double>>& muy,
@@ -31,9 +50,7 @@ Eigen::MatrixXcd rk4_sparse_eigen(
     int stride,
     bool renorm = false);
 
-
-
-// 最適化されたSuiteSparse版のRK4実装
+// 最適化版SuiteSparse-MKL版のRK4実装
 Eigen::MatrixXcd rk4_sparse_suitesparse_optimized(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
     const Eigen::SparseMatrix<std::complex<double>>& mux,
@@ -44,9 +61,9 @@ Eigen::MatrixXcd rk4_sparse_suitesparse_optimized(
     double dt,
     bool return_traj,
     int stride,
-    bool renorm = false);
+    bool renorm);
 
-// 高速SuiteSparse版のRK4実装
+// 高速版SuiteSparse-MKL版のRK4実装
 Eigen::MatrixXcd rk4_sparse_suitesparse_fast(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
     const Eigen::SparseMatrix<std::complex<double>>& mux,
@@ -57,9 +74,6 @@ Eigen::MatrixXcd rk4_sparse_suitesparse_fast(
     double dt,
     bool return_traj,
     int stride,
-    bool renorm = false);
+    bool renorm);
 
-// ヘルパー関数
-std::vector<std::vector<double>> field_to_triplets(const Eigen::VectorXd& field);
-
-} // namespace excitation_rk4_sparse
+} // namespace excitation_rk4_sparse 

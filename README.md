@@ -6,10 +6,15 @@
 - CSR形式の疎行列サポート
 - OpenMPによる並列化（動的スケジューリング最適化）
 - Python/C++のハイブリッド実装
+- **新機能**: SuiteSparse-MKLサポート
+  - Intel MKL Sparse BLASによる高速化
+  - Eigen版との自動切り替え
+  - 性能比較機能
 - 包括的なベンチマーク機能
   - 2準位系と調和振動子のテストケース
   - 詳細なパフォーマンス分析
   - 解析解との比較
+  - **新機能**: 実装間の速度比較
 - メモリ最適化
   - キャッシュライン境界を考慮したアライメント
   - 疎行列パターンの再利用
@@ -27,6 +32,7 @@
 - pybind11
 - Eigen3
 - OpenMP（推奨）
+- **オプション**: Intel MKL（SuiteSparse-MKL版を使用する場合）
 
 ## インストール
 
@@ -42,8 +48,11 @@ pip install rk4-sparse-cpp
 git clone https://github.com/1160-hrk/excitation-rk4-sparse.git
 cd excitation-rk4-sparse
 
-# C++ライブラリのビルド
+# Eigen版のビルド（デフォルト）
 ./tools/build.sh --clean
+
+# SuiteSparse-MKL版のビルド（オプション）
+./build_suitesparse.sh
 
 # Pythonパッケージのインストール
 pip install -e .
@@ -66,19 +75,31 @@ python examples/python/benchmark_ho.py
 ### 基本的な使用法
 ```python
 # pip installでインストールした場合
-from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
+from rk4_sparse import (
+    rk4_sparse_py, 
+    rk4_sparse_eigen, 
+    rk4_sparse_suitesparse,
+    benchmark_implementations
+)
 
 # 開発用インストールの場合
 # import sys
 # import os
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
-# from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
+# from rk4_sparse import rk4_sparse_py, rk4_sparse_eigen, rk4_sparse_suitesparse
 
 # Python実装
 result_py = rk4_sparse_py(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
 
-# C++実装（高速）
-result_cpp = rk4_sparse_cpp(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
+# Eigen版（高速）
+result_eigen = rk4_sparse_eigen(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
+
+# SuiteSparse-MKL版（最速、利用可能な場合）
+if rk4_sparse_suitesparse is not None:
+    result_suitesparse = rk4_sparse_suitesparse(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
+
+# 実装間のベンチマーク
+results = benchmark_implementations(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm, num_runs=5)
 ```
 
 ### 例題
@@ -100,11 +121,20 @@ python examples/python/benchmark_ho.py         # 調和振動子系での比較
 1. 実装間の比較
 ```bash
 python examples/python/benchmark_ho.py         # 調和振動子系での比較
+python test_suitesparse.py                     # SuiteSparse-MKL版のテスト
 ```
 
 2. 2準位系のテスト
 ```bash
 python examples/python/two_level_excitation.py # 2準位励起のテスト
+```
+
+3. 新しいベンチマーク機能
+```python
+# 実装間の速度比較
+results = benchmark_implementations(H0, mux, muy, Ex, Ey, psi0, dt, True, 1, False, 5)
+for result in results:
+    print(f"{result.implementation}: {result.total_time:.6f}秒 (Eigen比: {result.speedup_vs_eigen:.3f}x)")
 ```
 
 ## 性能

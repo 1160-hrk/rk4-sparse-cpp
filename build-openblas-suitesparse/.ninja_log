@@ -1,0 +1,14 @@
+# ninja log v5
+1	719	1752672434620296015	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_benchmark.cpp.o	85e95f55caa3813a
+3	912	1752671558772195107	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_suitesparse_fast.cpp.o	e6ce48d3fcb55fc6
+1	1046	1752669851413697045	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_sparse.cpp.o	3d463eaacb8bc664
+2	917	1752671558777600571	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_suitesparse_optimized.cpp.o	c685958c00e6bee3
+1	1744	1752672435645303083	CMakeFiles/_rk4_sparse_cpp.dir/src/bindings/python_bindings.cpp.o	d9f22f7ec3dc0669
+1	894	1752672434795553747	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_suitesparse.cpp.o	db1fab76b4cb8107
+1744	3629	1752672437531249260	_rk4_sparse_cpp.cpython-310-aarch64-linux-gnu.so	dfb447a19eb0913c
+1	768	1752674985110717249	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_benchmark.cpp.o	85e95f55caa3813a
+1	962	1752674985304309913	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_suitesparse.cpp.o	db1fab76b4cb8107
+2	964	1752674985306848669	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_suitesparse_optimized.cpp.o	c685958c00e6bee3
+2	967	1752674985309657384	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_suitesparse_fast.cpp.o	e6ce48d3fcb55fc6
+1	1825	1752674986167419026	CMakeFiles/_rk4_sparse_cpp.dir/src/bindings/python_bindings.cpp.o	d9f22f7ec3dc0669
+1826	4092	1752674988434910401	_rk4_sparse_cpp.cpython-310-aarch64-linux-gnu.so	5eec228bbbd2df59

@@ -1,0 +1,10 @@
+# ninja log v5
+1	892	1752666435244592043	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_benchmark.cpp.o	807aaddd0b70af3e
+0	1113	1752666435465561950	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_sparse.cpp.o	c74876fcff701927
+1	2050	1752666436401716187	CMakeFiles/_rk4_sparse_cpp.dir/src/bindings/python_bindings.cpp.o	e88cda0e6ff10b9
+2054	3909	1752666438261817365	_rk4_sparse_cpp.cpython-310-aarch64-linux-gnu.so	aa56312a712c6666
+2	869	1752668462567272494	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_benchmark.cpp.o	18bb404c980e716e
+2	1099	1752668462797584308	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_suitesparse.cpp.o	79b8b5c1192d6075
+2	1122	1752668462820247293	CMakeFiles/_rk4_sparse_cpp.dir/src/core/excitation_rk4_sparse.cpp.o	946200d240df24f8
+2	2081	1752668463779375971	CMakeFiles/_rk4_sparse_cpp.dir/src/bindings/python_bindings.cpp.o	8e14d1d38bc52156
+2082	4145	1752668465843732055	_rk4_sparse_cpp.cpython-310-aarch64-linux-gnu.so	82a89b886a812025
