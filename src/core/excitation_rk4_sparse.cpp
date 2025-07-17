@@ -26,6 +26,109 @@ inline int get_optimal_parallel_threshold() {
     #endif
 }
 
+// Phase 4: 最適化されたスパース行列-ベクトル積
+inline void optimized_sparse_matrix_vector_multiply(
+    const Eigen::SparseMatrix<std::complex<double>>& H,
+    const Eigen::VectorXcd& x,
+    Eigen::VectorXcd& y,
+    int dim) {
+    
+    using cplx = std::complex<double>;
+    const int optimal_threshold = get_optimal_parallel_threshold();
+    
+    #ifdef _OPENMP
+    if (dim >= 8192) {
+        // 8192次元以上：並列化を完全に無効化（シリアル実行）
+        y = cplx(0, -1) * (H * x);
+    } else if (dim > 4096) {
+        // 大規模問題：列ベース並列化
+        y.setZero();
+        #pragma omp parallel for schedule(dynamic, 64)
+        for (int k = 0; k < H.outerSize(); ++k) {
+            for (Eigen::SparseMatrix<std::complex<double>>::InnerIterator it(H, k); it; ++it) {
+                y[it.row()] += it.value() * x[it.col()];
+            }
+        }
+        y *= cplx(0, -1);
+    } else {
+        // 中規模問題：Eigenの最適化された実装を使用
+        y = cplx(0, -1) * (H * x);
+    }
+    #else
+    y = cplx(0, -1) * (H * x);
+    #endif
+}
+
+// Phase 4: 適応的並列化戦略（8192次元対応）
+inline void adaptive_parallel_matrix_update(
+    std::complex<double>* H_values,
+    const std::complex<double>* H0_data,
+    const std::complex<double>* mux_data,
+    const std::complex<double>* muy_data,
+    double ex, double ey, size_t nnz, int dim) {
+    
+    const int optimal_threshold = get_optimal_parallel_threshold();
+    
+    #ifdef _OPENMP
+    if (dim >= 8192) {
+        // 8192次元以上：並列化を完全に無効化
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else if (nnz > optimal_threshold * 128) {
+        // 極大規模問題：動的スケジューリング
+        const int chunk_size = std::max(1024, static_cast<int>(nnz) / (omp_get_max_threads() * 128));
+        #pragma omp parallel for schedule(dynamic, chunk_size)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else if (nnz > optimal_threshold * 64) {
+        // 超大規模問題：動的スケジューリング
+        const int chunk_size = std::max(512, static_cast<int>(nnz) / (omp_get_max_threads() * 64));
+        #pragma omp parallel for schedule(dynamic, chunk_size)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else if (nnz > optimal_threshold * 32) {
+        // 大規模問題：動的スケジューリング
+        const int chunk_size = std::max(256, static_cast<int>(nnz) / (omp_get_max_threads() * 32));
+        #pragma omp parallel for schedule(dynamic, chunk_size)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else if (nnz > optimal_threshold * 16) {
+        // 中大規模問題：ガイド付きスケジューリング
+        #pragma omp parallel for schedule(guided)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else if (nnz > optimal_threshold * 8) {
+        // 中規模問題：静的スケジューリング
+        #pragma omp parallel for schedule(static)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else if (nnz > optimal_threshold * 4) {
+        // 小中規模問題：小さなチャンクサイズでの静的スケジューリング
+        const int chunk_size = std::max(1, static_cast<int>(nnz) / (omp_get_max_threads() * 4));
+        #pragma omp parallel for schedule(static, chunk_size)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else {
+        // 小規模問題：シリアル実行
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    }
+    #else
+    // OpenMPが利用できない場合のシリアル実行
+    for (size_t i = 0; i < nnz; ++i) {
+        H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+    }
+    #endif
+}
+
 // Phase 3: 最適化された並列化戦略（超厳格版）
 inline void optimized_parallel_matrix_update(
     std::complex<double>* H_values,
@@ -284,11 +387,11 @@ Eigen::MatrixXcd rk4_sparse_eigen(
         double ex1 = Ex3[s][0], ex2 = Ex3[s][1], ex4 = Ex3[s][2];
         double ey1 = Ey3[s][0], ey2 = Ey3[s][1], ey4 = Ey3[s][2];
 
-        // H1 - Phase 3: 最適化された行列更新
+        // H1 - Phase 4: 最適化された行列更新（8192次元対応）
         #ifdef DEBUG_PERFORMANCE
         auto update_start = Clock::now();
         #endif
-        optimized_parallel_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex1, ey1, nnz);
+        adaptive_parallel_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex1, ey1, nnz, dim);
         #ifdef DEBUG_PERFORMANCE
         auto update_end = Clock::now();
         current_metrics.matrix_update_time += Duration(update_end - update_start).count();
@@ -299,21 +402,21 @@ Eigen::MatrixXcd rk4_sparse_eigen(
         #ifdef DEBUG_PERFORMANCE
         auto rk4_start = Clock::now();
         #endif
-        k1 = cplx(0, -1) * (H * psi);
+        optimized_sparse_matrix_vector_multiply(H, psi, k1, dim);
         buf = psi + 0.5 * dt * k1;
 
-        // H2 - Phase 3: 最適化された行列更新
-        optimized_parallel_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex2, ey2, nnz);
-        k2 = cplx(0, -1) * (H * buf);
+        // H2 - Phase 4: 最適化された行列更新（8192次元対応）
+        adaptive_parallel_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex2, ey2, nnz, dim);
+        optimized_sparse_matrix_vector_multiply(H, buf, k2, dim);
         buf = psi + 0.5 * dt * k2;
 
         // H3
-        k3 = cplx(0, -1) * (H * buf);
+        optimized_sparse_matrix_vector_multiply(H, buf, k3, dim);
         buf = psi + dt * k3;
 
-        // H4 - Phase 3: 最適化された行列更新
-        optimized_parallel_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex4, ey4, nnz);
-        k4 = cplx(0, -1) * (H * buf);
+        // H4 - Phase 4: 最適化された行列更新（8192次元対応）
+        adaptive_parallel_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex4, ey4, nnz, dim);
+        optimized_sparse_matrix_vector_multiply(H, buf, k4, dim);
 
         // 更新
         psi += (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
