@@ -27,6 +27,47 @@ std::vector<std::vector<double>> field_to_triplets(const Eigen::VectorXd& field)
     return triplets;
 }
 
+// Phase 2: 階層的並列化を実装した最適化された行列更新関数
+inline void optimized_matrix_update(
+    std::complex<double>* H_values,
+    const std::complex<double>* H0_data,
+    const std::complex<double>* mux_data,
+    const std::complex<double>* muy_data,
+    double ex, double ey, size_t nnz) {
+    
+    #ifdef _OPENMP
+    const int max_threads = omp_get_max_threads();
+    const int optimal_chunk_size = std::max(1, static_cast<int>(nnz) / (max_threads * 4));
+    
+    if (nnz > 50000) {  // より高い閾値で大規模問題
+        #pragma omp parallel for schedule(dynamic, optimal_chunk_size)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else if (nnz > 10000) {  // 中規模問題
+        #pragma omp parallel for schedule(guided)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else if (nnz > 1000) {  // 小規模問題
+        #pragma omp parallel for schedule(static)
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    } else {
+        // シリアル実行（小さすぎる問題）
+        for (size_t i = 0; i < nnz; ++i) {
+            H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+        }
+    }
+    #else
+    // OpenMPが利用できない場合のシリアル実行
+    for (size_t i = 0; i < nnz; ++i) {
+        H_values[i] = H0_data[i] + ex * mux_data[i] + ey * muy_data[i];
+    }
+    #endif
+}
+
 // Eigen版のRK4実装（関数名を変更）
 Eigen::MatrixXcd rk4_sparse_eigen(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
@@ -109,7 +150,7 @@ Eigen::MatrixXcd rk4_sparse_eigen(
     }
     pattern.makeCompressed();
 
-    // 2️⃣ パターンに合わせてデータを展開
+    // 2️⃣ パターンに合わせてデータを展開（Phase 2: 並列化最適化）
     auto expand_to_pattern = [](const Eigen::SparseMatrix<cplx>& mat, 
                                const Eigen::SparseMatrix<cplx>& pattern) -> std::vector<cplx> {
         std::vector<cplx> result(pattern.nonZeros(), cplx(0.0, 0.0));
@@ -126,17 +167,37 @@ Eigen::MatrixXcd rk4_sparse_eigen(
             }
         }
 
-        // データを展開（大きな行列の場合のみ並列化）
-        if (pattern.nonZeros() > 10000) {
+        // Phase 2: 階層的並列化によるデータ展開
+        const size_t nnz = pattern.nonZeros();
+        #ifdef _OPENMP
+        const int max_threads = omp_get_max_threads();
+        const int optimal_chunk_size = std::max(1, static_cast<int>(nnz) / (max_threads * 4));
+        
+        if (nnz > 50000) {
+            #pragma omp parallel for schedule(dynamic, optimal_chunk_size)
+            for (size_t i = 0; i < nnz; ++i) {
+                result[i] = mat.coeff(pi[i], pj[i]);
+            }
+        } else if (nnz > 10000) {
+            #pragma omp parallel for schedule(guided)
+            for (size_t i = 0; i < nnz; ++i) {
+                result[i] = mat.coeff(pi[i], pj[i]);
+            }
+        } else if (nnz > 1000) {
             #pragma omp parallel for schedule(static)
-            for (int i = 0; i < pattern.nonZeros(); ++i) {
+            for (size_t i = 0; i < nnz; ++i) {
                 result[i] = mat.coeff(pi[i], pj[i]);
             }
         } else {
-            for (int i = 0; i < pattern.nonZeros(); ++i) {
+            for (size_t i = 0; i < nnz; ++i) {
                 result[i] = mat.coeff(pi[i], pj[i]);
             }
         }
+        #else
+        for (size_t i = 0; i < nnz; ++i) {
+            result[i] = mat.coeff(pi[i], pj[i]);
+        }
+        #endif
         
         return result;
     };
@@ -158,20 +219,11 @@ Eigen::MatrixXcd rk4_sparse_eigen(
         double ex1 = Ex3[s][0], ex2 = Ex3[s][1], ex4 = Ex3[s][2];
         double ey1 = Ey3[s][0], ey2 = Ey3[s][1], ey4 = Ey3[s][2];
 
-        // H1
+        // H1 - Phase 2: 最適化された行列更新
         #ifdef DEBUG_PERFORMANCE
         auto update_start = Clock::now();
         #endif
-        if (nnz > 10000) {
-            #pragma omp parallel for schedule(static)
-            for (int i = 0; i < nnz; ++i) {
-                H.valuePtr()[i] = H0_data[i] + ex1 * mux_data[i] + ey1 * muy_data[i];
-            }
-        } else {
-            for (int i = 0; i < nnz; ++i) {
-                H.valuePtr()[i] = H0_data[i] + ex1 * mux_data[i] + ey1 * muy_data[i];
-            }
-        }
+        optimized_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex1, ey1, nnz);
         #ifdef DEBUG_PERFORMANCE
         auto update_end = Clock::now();
         current_metrics.matrix_update_time += Duration(update_end - update_start).count();
@@ -185,17 +237,8 @@ Eigen::MatrixXcd rk4_sparse_eigen(
         k1 = cplx(0, -1) * (H * psi);
         buf = psi + 0.5 * dt * k1;
 
-        // H2
-        if (nnz > 10000) {
-            #pragma omp parallel for schedule(static)
-            for (int i = 0; i < nnz; ++i) {
-                H.valuePtr()[i] = H0_data[i] + ex2 * mux_data[i] + ey2 * muy_data[i];
-            }
-        } else {
-            for (int i = 0; i < nnz; ++i) {
-                H.valuePtr()[i] = H0_data[i] + ex2 * mux_data[i] + ey2 * muy_data[i];
-            }
-        }
+        // H2 - Phase 2: 最適化された行列更新
+        optimized_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex2, ey2, nnz);
         k2 = cplx(0, -1) * (H * buf);
         buf = psi + 0.5 * dt * k2;
 
@@ -203,17 +246,8 @@ Eigen::MatrixXcd rk4_sparse_eigen(
         k3 = cplx(0, -1) * (H * buf);
         buf = psi + dt * k3;
 
-        // H4
-        if (nnz > 10000) {
-            #pragma omp parallel for schedule(static)
-            for (int i = 0; i < nnz; ++i) {
-                H.valuePtr()[i] = H0_data[i] + ex4 * mux_data[i] + ey4 * muy_data[i];
-            }
-        } else {
-            for (int i = 0; i < nnz; ++i) {
-                H.valuePtr()[i] = H0_data[i] + ex4 * mux_data[i] + ey4 * muy_data[i];
-            }
-        }
+        // H4 - Phase 2: 最適化された行列更新
+        optimized_matrix_update(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex4, ey4, nnz);
         k4 = cplx(0, -1) * (H * buf);
 
         // 更新

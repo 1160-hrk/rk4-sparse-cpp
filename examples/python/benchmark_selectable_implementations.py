@@ -18,7 +18,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../python'))
 
 try:
-    from rk4_sparse import rk4_sparse_py, rk4_numba_py, rk4_sparse_eigen, rk4_sparse_suitesparse
+    from rk4_sparse import rk4_sparse_py, rk4_numba_py, rk4_sparse_eigen, rk4_sparse_suitesparse, rk4_sparse_eigen_direct_csr
 except ImportError as e:
     print(f"Warning: Could not import rk4_sparse: {e}")
     print("Please make sure the module is built and installed correctly.")
@@ -126,6 +126,7 @@ def get_implementation_function(impl_name: str):
         'python': rk4_sparse_py,
         'numba': rk4_numba_py,
         'eigen': rk4_sparse_eigen,
+        'eigen_direct_csr': rk4_sparse_eigen_direct_csr,  # 新しい最適化実装
         'suitesparse': rk4_sparse_suitesparse
     }
     return implementation_map.get(impl_name)
@@ -140,6 +141,12 @@ def prepare_arguments_for_implementation(impl_name: str, H0, mux, muy, Ex, Ey, p
         return (H0_numba, mux_numba, muy_numba, 
                 Ex.astype(np.float64), Ey.astype(np.float64), 
                 psi0, dt_E*2, True, 1, False)
+    elif impl_name == 'eigen_direct_csr':
+        # 新しい直接CSR実装はCSRデータを直接渡す
+        return (H0.data, H0.indices, H0.indptr,
+                mux.data, mux.indices, mux.indptr,
+                muy.data, muy.indices, muy.indptr,
+                Ex, Ey, psi0, dt_E*2, True, 1, False)
     elif impl_name == 'suitesparse':
         # SuiteSparse実装は追加のlevelパラメータを要求
         return (H0, mux, muy, Ex, Ey, psi0, dt_E*2, True, 1, False, 1)
@@ -198,18 +205,20 @@ def run_detailed_benchmark(dims, selected_implementations: Set[str], num_repeats
         if 'python' in selected_implementations:
             python_mean = np.mean(results['python'][dim])
             for impl in selected_implementations:
-                if impl != 'python':
+                if impl != 'python' and detailed_results[impl][dim] is not None:
                     impl_mean = np.mean(results[impl][dim])
-                    if impl_mean > 0 and detailed_results[impl][dim] is not None:
+                    if impl_mean > 0:
                         speedup = float(python_mean / impl_mean)
                         detailed_results[impl][dim].speedup_vs_python = speedup
-                    elif detailed_results[impl][dim] is not None:
+                    else:
                         detailed_results[impl][dim].speedup_vs_python = 0.0
             
             print(f"速度向上率（Python基準）:")
             for impl in selected_implementations:
                 if impl != 'python' and detailed_results[impl][dim] is not None:
-                    print(f"  {impl}: {detailed_results[impl][dim].speedup_vs_python:.2f}倍")
+                    result = detailed_results[impl][dim]
+                    if result is not None:
+                        print(f"  {impl}: {result.speedup_vs_python:.2f}倍")
         
     return results, detailed_results
 
@@ -495,13 +504,12 @@ def print_detailed_summary(results, detailed_results, dims, selected_implementat
 
 def main():
     # 利用可能な実装
-    available_implementations = {'python', 'numba', 'eigen', 'suitesparse'}
+    available_implementations = {'python', 'numba', 'eigen', 'eigen_direct_csr', 'suitesparse'}
     
     # 比較する実装を選択（ここで変更可能）
-    # selected_implementations = {'python', 'numba', 'eigen', 'suitesparse'}  # 全実装
-    # selected_implementations = {'python', 'numba'}  # PythonとNumbaのみ
-    # selected_implementations = {'eigen', 'suitesparse'}  # C++実装のみ
-    selected_implementations = {'python', 'eigen', 'suitesparse'}  # PythonとEigenとSuiteSparseのみ
+    # selected_implementations = {'python', 'numba', 'eigen', 'eigen_direct_csr', 'suitesparse'}  # 全実装
+    # selected_implementations = {'python', 'eigen', 'eigen_direct_csr'}  # PythonとEigen実装の比較
+    selected_implementations = {'python', 'eigen', 'eigen_direct_csr', 'suitesparse'}  # 最適化効果の確認
     
     # 選択された実装の妥当性チェック
     invalid_impls = selected_implementations - available_implementations
@@ -521,6 +529,7 @@ def main():
     print(f"- 時間発展ステップ数: {num_steps}")
     print(f"- 選択された実装: {', '.join(sorted(selected_implementations))}")
     print(f"- 追加メトリクス: CPU使用率, メモリ使用量, スレッド数")
+    print(f"- 新機能: Phase 1-2最適化（データ変換削減 + 階層的並列化）")
     
     results, detailed_results = run_detailed_benchmark(dims, selected_implementations, num_repeats, num_steps)
     
