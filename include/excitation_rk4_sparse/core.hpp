@@ -18,8 +18,36 @@ struct PerformanceMetrics {
     size_t rk4_steps = 0;
 };
 
-// 新しい関数 - Python APIと互換性のある実装
-Eigen::MatrixXcd rk4_sparse_cpp(
+// Eigen版のRK4実装（関数名を明確化）
+Eigen::MatrixXcd rk4_sparse_eigen(
+    const Eigen::SparseMatrix<std::complex<double>>& H0,
+    const Eigen::SparseMatrix<std::complex<double>>& mux,
+    const Eigen::SparseMatrix<std::complex<double>>& muy,
+    const Eigen::VectorXd& Ex,
+    const Eigen::VectorXd& Ey,
+    const Eigen::VectorXcd& psi0,
+    double dt,
+    bool return_traj,
+    int stride,
+    bool renorm = false);
+
+
+
+// 最適化されたSuiteSparse版のRK4実装
+Eigen::MatrixXcd rk4_sparse_suitesparse_optimized(
+    const Eigen::SparseMatrix<std::complex<double>>& H0,
+    const Eigen::SparseMatrix<std::complex<double>>& mux,
+    const Eigen::SparseMatrix<std::complex<double>>& muy,
+    const Eigen::VectorXd& Ex,
+    const Eigen::VectorXd& Ey,
+    const Eigen::VectorXcd& psi0,
+    double dt,
+    bool return_traj,
+    int stride,
+    bool renorm = false);
+
+// 高速SuiteSparse版のRK4実装
+Eigen::MatrixXcd rk4_sparse_suitesparse_fast(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
     const Eigen::SparseMatrix<std::complex<double>>& mux,
     const Eigen::SparseMatrix<std::complex<double>>& muy,

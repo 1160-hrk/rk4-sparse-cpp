@@ -27,8 +27,8 @@ std::vector<std::vector<double>> field_to_triplets(const Eigen::VectorXd& field)
     return triplets;
 }
 
-// rk4_cpu_sparse実装
-Eigen::MatrixXcd rk4_sparse_cpp(
+// Eigen版のRK4実装（関数名を変更）
+Eigen::MatrixXcd rk4_sparse_eigen(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
     const Eigen::SparseMatrix<std::complex<double>>& mux,
     const Eigen::SparseMatrix<std::complex<double>>& muy,
@@ -244,7 +244,7 @@ Eigen::MatrixXcd rk4_sparse_cpp(
 
     // パフォーマンスメトリクスを出力（デバッグ用）
     #ifdef DEBUG_PERFORMANCE
-    std::cout << "\n=== パフォーマンスメトリクス ===\n";
+    std::cout << "\n=== Eigen版パフォーマンスメトリクス ===\n";
     std::cout << "行列更新平均時間: " << current_metrics.matrix_update_time / current_metrics.matrix_updates * 1000 << " ms\n";
     std::cout << "RK4ステップ平均時間: " << current_metrics.rk4_step_time / current_metrics.rk4_steps * 1000 << " ms\n";
     #endif
