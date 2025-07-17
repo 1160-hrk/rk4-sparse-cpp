@@ -11,7 +11,7 @@ import psutil
 import tracemalloc
 import multiprocessing
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Set
 
 # 現在のプロジェクト構造に対応
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
@@ -120,11 +120,39 @@ def create_test_system(dim, num_steps=1000):
     
     return H0, mux, muy, Ex, Ey, psi0, dt_E
 
-def run_detailed_benchmark(dims, num_repeats=100, num_steps=1000):
-    """詳細なベンチマークを実行"""
-    implementations = ['python', 'numba', 'eigen', 'suitesparse']
-    results = {impl: {dim: [] for dim in dims} for impl in implementations}
-    detailed_results: Dict[str, Dict[int, Optional[DetailedBenchmarkResult]]] = {impl: {dim: None for dim in dims} for impl in implementations}
+def get_implementation_function(impl_name: str):
+    """実装名から関数を取得"""
+    implementation_map = {
+        'python': rk4_sparse_py,
+        'numba': rk4_numba_py,
+        'eigen': rk4_sparse_eigen,
+        'suitesparse': rk4_sparse_suitesparse
+    }
+    return implementation_map.get(impl_name)
+
+def prepare_arguments_for_implementation(impl_name: str, H0, mux, muy, Ex, Ey, psi0, dt_E):
+    """実装に応じて引数を準備"""
+    if impl_name == 'numba':
+        # Numba実装はnumpy配列を要求
+        H0_numba = H0.toarray()
+        mux_numba = mux.toarray()
+        muy_numba = muy.toarray()
+        return (H0_numba, mux_numba, muy_numba, 
+                Ex.astype(np.float64), Ey.astype(np.float64), 
+                psi0, dt_E*2, True, 1, False)
+    elif impl_name == 'suitesparse':
+        # SuiteSparse実装は追加のlevelパラメータを要求
+        return (H0, mux, muy, Ex, Ey, psi0, dt_E*2, True, 1, False, 1)
+    else:
+        # PythonとEigen実装は標準的な引数
+        return (H0, mux, muy, Ex, Ey, psi0, dt_E*2, True, 1, False)
+
+def run_detailed_benchmark(dims, selected_implementations: Set[str], num_repeats=100, num_steps=1000):
+    """選択された実装で詳細なベンチマークを実行"""
+    results = {impl: {dim: [] for dim in dims} for impl in selected_implementations}
+    detailed_results: Dict[str, Dict[int, Optional[DetailedBenchmarkResult]]] = {
+        impl: {dim: None for dim in dims} for impl in selected_implementations
+    }
     
     profiler = DetailedPerformanceProfiler()
 
@@ -134,158 +162,98 @@ def run_detailed_benchmark(dims, num_repeats=100, num_steps=1000):
         # テストシステムの生成
         H0, mux, muy, Ex, Ey, psi0, dt_E = create_test_system(dim)
         
-        # Python実装
-        print("Python実装の実行中...")
-        for i in range(num_repeats):
-            start_time = time.time()
-            _ = rk4_sparse_py(H0, mux, muy, Ex, Ey, psi0, dt_E*2, True, 1, False)
-            end_time = time.time()
-            results['python'][dim].append(end_time - start_time)
-            print(f"  反復 {i+1}/{num_repeats}: {results['python'][dim][-1]:.3f} 秒")
-        
-        # 詳細プロファイリング（最後の1回）
-        detailed_result = profiler.profile_execution(
-            rk4_sparse_py, H0, mux, muy, Ex, Ey, psi0, dt_E*2, True, 1, False
-        )
-        detailed_result.dimension = dim
-        detailed_results['python'][dim] = detailed_result
-        
-        # Numba実装
-        print("Numba実装の実行中...")
-        # H0, mux, muyをnp.ndarrayに変換
-        H0_numba = H0.toarray()
-        mux_numba = mux.toarray()
-        muy_numba = muy.toarray()
-        
-        for i in range(num_repeats):
-            start_time = time.time()
-            _ = rk4_numba_py(
-                H0_numba, mux_numba, muy_numba,
-                Ex.astype(np.float64), Ey.astype(np.float64),
-                psi0,
-                dt_E*2,
-                True,
-                1,
-                False
-            )
-            end_time = time.time()
-            results['numba'][dim].append(end_time - start_time)
-            print(f"  反復 {i+1}/{num_repeats}: {results['numba'][dim][-1]:.3f} 秒")
-        
-        # 詳細プロファイリング
-        detailed_result = profiler.profile_execution(
-            rk4_numba_py, H0_numba, mux_numba, muy_numba,
-            Ex.astype(np.float64), Ey.astype(np.float64),
-            psi0, dt_E*2, True, 1, False
-        )
-        detailed_result.dimension = dim
-        detailed_results['numba'][dim] = detailed_result
-        
-        # C++ Eigen実装
-        print("C++ Eigen実装の実行中...")
-        for i in range(num_repeats):
-            start_time = time.time()
-            _ = rk4_sparse_eigen(
-                H0, mux, muy,
-                Ex, Ey,
-                psi0,
-                dt_E*2,
-                True,
-                1,
-                False
-            )
-            end_time = time.time()
-            results['eigen'][dim].append(end_time - start_time)
-            print(f"  反復 {i+1}/{num_repeats}: {results['eigen'][dim][-1]:.3f} 秒")
-        
-        # 詳細プロファイリング
-        detailed_result = profiler.profile_execution(
-            rk4_sparse_eigen, H0, mux, muy, Ex, Ey, psi0, dt_E*2, True, 1, False
-        )
-        detailed_result.dimension = dim
-        detailed_results['eigen'][dim] = detailed_result
-        
-        # C++ SuiteSparse実装
-        print("C++ SuiteSparse実装の実行中...")
-        try:
-            for i in range(num_repeats):
-                start_time = time.time()
-                _ = rk4_sparse_suitesparse(
-                    H0, mux, muy,
-                    Ex, Ey,
-                    psi0,
-                    dt_E*2,
-                    True,
-                    1,
-                    False,
-                    1  # level=1 (STANDARD)
-                )
-                end_time = time.time()
-                results['suitesparse'][dim].append(end_time - start_time)
-                print(f"  反復 {i+1}/{num_repeats}: {results['suitesparse'][dim][-1]:.3f} 秒")
+        # 各実装のベンチマーク実行
+        for impl in selected_implementations:
+            print(f"{impl}実装の実行中...")
             
-            # 詳細プロファイリング
-            detailed_result = profiler.profile_execution(
-                rk4_sparse_suitesparse, H0, mux, muy, Ex, Ey, psi0, 
-                dt_E*2, True, 1, False, 1
-            )
-            detailed_result.dimension = dim
-            detailed_results['suitesparse'][dim] = detailed_result
-            
-        except Exception as e:
-            print(f"SuiteSparse実装でエラーが発生しました: {e}")
-            results['suitesparse'][dim] = [float('inf')] * num_repeats
-            detailed_results['suitesparse'][dim] = None
+            try:
+                # 実装関数を取得
+                impl_func = get_implementation_function(impl)
+                if impl_func is None:
+                    print(f"  警告: {impl}実装が見つかりません")
+                    continue
+                
+                # 引数を準備
+                args = prepare_arguments_for_implementation(impl, H0, mux, muy, Ex, Ey, psi0, dt_E)
+                
+                # 繰り返し実行
+                for i in range(num_repeats):
+                    start_time = time.time()
+                    _ = impl_func(*args)
+                    end_time = time.time()
+                    results[impl][dim].append(end_time - start_time)
+                    print(f"  反復 {i+1}/{num_repeats}: {results[impl][dim][-1]:.3f} 秒")
+                
+                # 詳細プロファイリング（最後の1回）
+                detailed_result = profiler.profile_execution(impl_func, *args)
+                detailed_result.dimension = dim
+                detailed_results[impl][dim] = detailed_result
+                
+            except Exception as e:
+                print(f"  {impl}実装でエラーが発生しました: {e}")
+                results[impl][dim] = [float('inf')] * num_repeats
+                detailed_results[impl][dim] = None
         
         # 速度向上率を計算（Python実装を基準）
-        python_mean = np.mean(results['python'][dim])
-        for impl in implementations:
-            if impl != 'python':
-                impl_mean = np.mean(results[impl][dim])
-                if impl_mean > 0:
-                    speedup = float(python_mean / impl_mean)
-                    if detailed_results[impl][dim] is not None:
+        if 'python' in selected_implementations:
+            python_mean = np.mean(results['python'][dim])
+            for impl in selected_implementations:
+                if impl != 'python':
+                    impl_mean = np.mean(results[impl][dim])
+                    if impl_mean > 0 and detailed_results[impl][dim] is not None:
+                        speedup = float(python_mean / impl_mean)
                         detailed_results[impl][dim].speedup_vs_python = speedup
-                else:
-                    if detailed_results[impl][dim] is not None:
-                        detailed_results[impl][dim].speedup_vs_python = 0.0    
-        print(f"速度向上率（Python基準）:")
-        for impl in implementations:
-            if impl != 'python':
-                if detailed_results[impl][dim] is not None:
+                    elif detailed_results[impl][dim] is not None:
+                        detailed_results[impl][dim].speedup_vs_python = 0.0
+            
+            print(f"速度向上率（Python基準）:")
+            for impl in selected_implementations:
+                if impl != 'python' and detailed_results[impl][dim] is not None:
                     print(f"  {impl}: {detailed_results[impl][dim].speedup_vs_python:.2f}倍")
         
     return results, detailed_results
 
-def plot_detailed_results(results, detailed_results, dims, num_steps=1000, num_repeats=10):
+def plot_detailed_results(results, detailed_results, dims, selected_implementations, num_steps=1000, num_repeats=10):
     """詳細な結果をプロット"""
-    plt.figure(figsize=(24, 18))
+    impl_list = list(selected_implementations)
+    colors = ['blue', 'green', 'red', 'orange', 'purple', 'brown', 'pink', 'gray']
     
-    implementations = ['python', 'numba', 'eigen', 'suitesparse']
-    colors = ['blue', 'green', 'red', 'orange']
+    # プロット数を計算（選択された実装数に応じて）
+    num_impls = len(impl_list)
+    if num_impls <= 2:
+        cols = 2
+    elif num_impls <= 4:
+        cols = 4
+    else:
+        cols = 4
     
-    # 1行時間の比較
-    plt.subplot(3, 4, 1)
+    rows = (num_impls + cols - 1) // cols + 2  # 追加の行を確保
+    
+    plt.figure(figsize=(6*cols, 5*rows))
+    
+    # 1. 実行時間の比較
+    plt.subplot(rows, cols, 1)
     x = np.arange(len(dims))
-    width = 0.2  
-    for i, impl in enumerate(implementations):
+    width = 0.8 / len(impl_list)
+    
+    for i, impl in enumerate(impl_list):
         means = [np.mean(results[impl][dim]) for dim in dims]
         stds = [np.std(results[impl][dim]) for dim in dims]
-        plt.bar(x + i*width, means, width, label=impl, yerr=stds, capsize=5, color=colors[i])
+        plt.bar(x + i*width, means, width, label=impl, yerr=stds, capsize=5, color=colors[i % len(colors)])
     
     plt.xlabel('Matrix Size')
     plt.ylabel('Execution Time (seconds)')
     plt.title('Execution Time Comparison')
-    plt.xticks(x + width*1.5, dims)
+    plt.xticks(x + width*(len(impl_list)-1)/2, dims)
     plt.legend()
     plt.grid(True)
     plt.yscale('log')
     
     # 2. CPU使用率の比較
-    plt.subplot(3, 4, 2)
-    for i, impl in enumerate(implementations):
+    plt.subplot(rows, cols, 2)
+    for i, impl in enumerate(impl_list):
         cpu_values = [detailed_results[impl][dim].cpu_usage if detailed_results[impl][dim] is not None else 0 for dim in dims]
-        plt.plot(dims, cpu_values, 'o-', label=impl, color=colors[i], linewidth=2, markersize=6)
+        plt.plot(dims, cpu_values, 'o-', label=impl, color=colors[i % len(colors)], linewidth=2, markersize=6)
     
     plt.xlabel('Matrix Size')
     plt.ylabel('CPU Usage (%)')
@@ -294,10 +262,10 @@ def plot_detailed_results(results, detailed_results, dims, num_steps=1000, num_r
     plt.legend()
     
     # 3. メモリ使用量の比較
-    plt.subplot(3, 4, 3)
-    for i, impl in enumerate(implementations):
+    plt.subplot(rows, cols, 3)
+    for i, impl in enumerate(impl_list):
         mem_values = [detailed_results[impl][dim].memory_usage if detailed_results[impl][dim] is not None else 0 for dim in dims]
-        plt.plot(dims, mem_values, 'o-', label=impl, color=colors[i], linewidth=2, markersize=6)
+        plt.plot(dims, mem_values, 'o-', label=impl, color=colors[i % len(colors)], linewidth=2, markersize=6)
     
     plt.xlabel('Matrix Size')
     plt.ylabel('Memory Usage (MB)')
@@ -306,10 +274,10 @@ def plot_detailed_results(results, detailed_results, dims, num_steps=1000, num_r
     plt.legend()
     
     # 4. スレッド数の比較
-    plt.subplot(3, 4, 4)
-    for i, impl in enumerate(implementations):
+    plt.subplot(rows, cols, 4)
+    for i, impl in enumerate(impl_list):
         thread_values = [detailed_results[impl][dim].thread_count if detailed_results[impl][dim] is not None else 0 for dim in dims]
-        plt.plot(dims, thread_values, 'o-', label=impl, color=colors[i], linewidth=2, markersize=6)
+        plt.plot(dims, thread_values, 'o-', label=impl, color=colors[i % len(colors)], linewidth=2, markersize=6)
     
     plt.xlabel('Matrix Size')
     plt.ylabel('Thread Count')
@@ -317,31 +285,33 @@ def plot_detailed_results(results, detailed_results, dims, num_steps=1000, num_r
     plt.grid(True)
     plt.legend()
     
-    # 5. 速度向上率の比較
-    plt.subplot(3, 4, 5)
-    for impl in ['numba', 'eigen', 'suitesparse']:
-        speedup_values = [detailed_results[impl][dim].speedup_vs_python if detailed_results[impl][dim] is not None else 0 for dim in dims]
-        plt.plot(dims, speedup_values, 'o-', label=impl, linewidth=2, markersize=6)
+    # 5. 速度向上率の比較（Pythonが含まれている場合）
+    if 'python' in selected_implementations:
+        plt.subplot(rows, cols, 5)
+        for impl in impl_list:
+            if impl != 'python':
+                speedup_values = [detailed_results[impl][dim].speedup_vs_python if detailed_results[impl][dim] is not None else 0 for dim in dims]
+                plt.plot(dims, speedup_values, 'o-', label=impl, linewidth=2, markersize=6)
+        
+        plt.xlabel('Matrix Size')
+        plt.ylabel('Speedup Ratio (vs Python)')
+        plt.title('Speedup Comparison')
+        plt.grid(True)
+        plt.legend()
+        plt.yscale('log')
     
-    plt.xlabel('Matrix Size')
-    plt.ylabel('Speedup Ratio (vs Python)')
-    plt.title('Speedup Comparison')
-    plt.grid(True)
-    plt.legend()
-    plt.yscale('log')
-    
-    # 6. メモリ効率（実行時間あたりのメモリ使用量）
-    plt.subplot(3, 4, 6)
-    for i, impl in enumerate(implementations):
+    # 6. メモリ効率
+    plt.subplot(rows, cols, 6)
+    for i, impl in enumerate(impl_list):
         efficiency_values = []
         for dim in dims:
             if detailed_results[impl][dim] is not None:
-                time_per_step = detailed_results[impl][dim].mean_time / 1000 # 正規化
+                time_per_step = detailed_results[impl][dim].mean_time / 1000
                 mem_per_step = detailed_results[impl][dim].memory_usage / 100
                 efficiency_values.append(mem_per_step / time_per_step if time_per_step > 0 else 0)
             else:
                 efficiency_values.append(0)
-        plt.plot(dims, efficiency_values, 'o-', label=impl, color=colors[i], linewidth=2, markersize=6)
+        plt.plot(dims, efficiency_values, 'o-', label=impl, color=colors[i % len(colors)], linewidth=2, markersize=6)
     
     plt.xlabel('Matrix Size')
     plt.ylabel('Memory/Time Ratio (MB/s)')
@@ -349,89 +319,13 @@ def plot_detailed_results(results, detailed_results, dims, num_steps=1000, num_r
     plt.grid(True)
     plt.legend()
     
-    # 7. Eigen vs SuiteSparse詳細比較
-    plt.subplot(3, 4, 7)
-    eigen_vs_suitesparse = []
-    for dim in dims:
-        if detailed_results['eigen'][dim] is not None and detailed_results['suitesparse'][dim] is not None:
-            eigen_time = detailed_results['eigen'][dim].mean_time
-            suitesparse_time = detailed_results['suitesparse'][dim].mean_time
-            eigen_vs_suitesparse.append(eigen_time / suitesparse_time if suitesparse_time > 0 else 1.0)
-        else:
-            eigen_vs_suitesparse.append(1.0)
-    
-    plt.plot(dims, eigen_vs_suitesparse, 'o-', label='Eigen/SuiteSparse', linewidth=2, markersize=6)
-    plt.axhline(y=1.0, color='black', linestyle='--', alpha=0.5, label='Equal performance')
-    plt.xlabel('Matrix Size')
-    plt.ylabel('Speedup Ratio (Eigen/SuiteSparse)')
-    plt.title('Eigen vs SuiteSparse Performance')
-    plt.grid(True)
-    plt.legend()
-    
-    # 8. CPU使用率 vs 実行時間の相関
-    plt.subplot(3, 4, 8)
-    for i, impl in enumerate(implementations):
-        times = []
-        cpus = []
-        for dim in dims:
-            if detailed_results[impl][dim]:
-                times.append(detailed_results[impl][dim].mean_time)
-                cpus.append(detailed_results[impl][dim].cpu_usage)
-        if times:
-            plt.scatter(times, cpus, label=impl, color=colors[i], alpha=0.7)
-    
-    plt.xlabel('Execution Time (seconds)')
-    plt.ylabel('CPU Usage (%)')
-    plt.title('CPU Usage vs Execution Time')
-    plt.grid(True)
-    plt.legend()
-    plt.xscale('log')
-    
-    # 9. メモリ使用量 vs 実行時間の相関
-    plt.subplot(3, 4, 9)
-    for i, impl in enumerate(implementations):
-        times = []
-        mems = []
-        for dim in dims:
-            if detailed_results[impl][dim]:
-                times.append(detailed_results[impl][dim].mean_time)
-                mems.append(detailed_results[impl][dim].memory_usage)
-        if times:
-            plt.scatter(times, mems, label=impl, color=colors[i], alpha=0.7)
-    
-    plt.xlabel('Execution Time (seconds)')
-    plt.ylabel('Memory Usage (MB)')
-    plt.title('Memory Usage vs Execution Time')
-    plt.grid(True)
-    plt.legend()
-    plt.xscale('log')
-    
-    # 10. スレッド数 vs 実行時間の相関
-    plt.subplot(3, 4, 10)
-    for i, impl in enumerate(implementations):
-        times = []
-        threads = []
-        for dim in dims:
-            if detailed_results[impl][dim]:
-                times.append(detailed_results[impl][dim].mean_time)
-                threads.append(detailed_results[impl][dim].thread_count)
-        if times:
-            plt.scatter(times, threads, label=impl, color=colors[i], alpha=0.7)
-    
-    plt.xlabel('Execution Time (seconds)')
-    plt.ylabel('Thread Count')
-    plt.title('Thread Count vs Execution Time')
-    plt.grid(True)
-    plt.legend()
-    plt.xscale('log')
-    
-    # 11. 最大次元での統計情報
-    plt.subplot(3, 4, 11)
+    # 7. 最大次元での統計情報
+    plt.subplot(rows, cols, 7)
     max_dim = max(dims)
     stats_data = []
     labels = []
     
-    for impl in implementations:
+    for impl in impl_list:
         times = results[impl][max_dim]
         if all(t != float('inf') for t in times):
             stats_data.append(times)
@@ -445,8 +339,8 @@ def plot_detailed_results(results, detailed_results, dims, num_steps=1000, num_r
         plt.grid(True)
         plt.yscale('log')
     
-    # 12. システム情報
-    plt.subplot(3, 4, 12)
+    # 8. システム情報
+    plt.subplot(rows, cols, 8)
     plt.axis('off')
     system_info = f"""
     System Information:
@@ -455,6 +349,7 @@ def plot_detailed_results(results, detailed_results, dims, num_steps=1000, num_r
     Available Memory: {psutil.virtual_memory().available / (1024**3):.1f} GB
     
     Benchmark Parameters:
+    Selected Implementations: {', '.join(impl_list)}
     Dimensions: {dims}
     Steps: {num_steps}
     Repeats: {num_repeats}
@@ -463,20 +358,25 @@ def plot_detailed_results(results, detailed_results, dims, num_steps=1000, num_r
              fontsize=10, verticalalignment='center')
     
     plt.tight_layout()
-    plt.savefig(os.path.join(savepath, 'detailed_benchmark_all_implementations.png'), 
+    
+    # ファイル名に選択された実装を含める
+    impl_names = '_'.join(sorted(impl_list))
+    plt.savefig(os.path.join(savepath, f'detailed_benchmark_{impl_names}.png'), 
                 dpi=300, bbox_inches='tight')
     plt.close()
 
-def save_detailed_benchmark_results(results, detailed_results, dims, savepath):
+def save_detailed_benchmark_results(results, detailed_results, dims, selected_implementations, savepath):
     """詳細なベンチマーク結果をファイルに保存"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    impl_names = '_'.join(sorted(selected_implementations))
     
     # JSONファイルに保存
-    json_filename = os.path.join(savepath, f'detailed_benchmark_all_implementations_{timestamp}.json')
+    json_filename = os.path.join(savepath, f'detailed_benchmark_{impl_names}_{timestamp}.json')
     
     # 結果を辞書形式に変換
     results_data = {
         'timestamp': timestamp,
+        'selected_implementations': list(selected_implementations),
         'dimensions': dims,
         'system_info': {
             'cpu_cores': multiprocessing.cpu_count(),
@@ -487,7 +387,7 @@ def save_detailed_benchmark_results(results, detailed_results, dims, savepath):
     }
     
     # 詳細結果を変換
-    for impl in ['python', 'numba', 'eigen', 'suitesparse']:
+    for impl in selected_implementations:
         results_data['detailed_results'][impl] = {}
         for dim in dims:
             if detailed_results[impl][dim]:
@@ -497,7 +397,7 @@ def save_detailed_benchmark_results(results, detailed_results, dims, savepath):
         json.dump(results_data, f, indent=2, ensure_ascii=False)
     
     # CSVファイルに保存
-    csv_filename = os.path.join(savepath, f'detailed_benchmark_all_implementations_{timestamp}.csv')
+    csv_filename = os.path.join(savepath, f'detailed_benchmark_{impl_names}_{timestamp}.csv')
     with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         # ヘッダー行
@@ -509,7 +409,7 @@ def save_detailed_benchmark_results(results, detailed_results, dims, savepath):
         
         # データ行
         for dim in dims:
-            for impl in ['python', 'numba', 'eigen', 'suitesparse']:
+            for impl in selected_implementations:
                 if detailed_results[impl][dim]:
                     result = detailed_results[impl][dim]
                     writer.writerow([
@@ -524,26 +424,27 @@ def save_detailed_benchmark_results(results, detailed_results, dims, savepath):
     
     return json_filename, csv_filename
 
-def print_detailed_summary(results, detailed_results, dims):
+def print_detailed_summary(results, detailed_results, dims, selected_implementations):
     """詳細な結果のサマリーを表示"""
     print("\n" + "="*80)
     print("詳細ベンチマーク結果サマリー")
     print("="*80)
     
-    implementations = ['python', 'numba', 'eigen', 'suitesparse']
+    impl_list = list(selected_implementations)
     
     # システム情報
     print(f"\nシステム情報:")
     print(f"  CPU コア数: {multiprocessing.cpu_count()}")
     print(f"  総メモリ: {psutil.virtual_memory().total / (1024**3):.1f} GB")
     print(f"  利用可能メモリ: {psutil.virtual_memory().available / (1024**3):.1f} GB")
+    print(f"  選択された実装: {', '.join(impl_list)}")
     
     # 各次元での最速実装
     print("\n各次元での最速実装:")
     for dim in dims:
         best_impl = None
         best_time = float('inf')
-        for impl in implementations:
+        for impl in impl_list:
             if detailed_results[impl][dim]:
                 if detailed_results[impl][dim].mean_time < best_time:
                     best_time = detailed_results[impl][dim].mean_time
@@ -554,7 +455,7 @@ def print_detailed_summary(results, detailed_results, dims):
     
     # 平均性能指標
     print("\n平均性能指標（全次元）:")
-    for impl in implementations:
+    for impl in impl_list:
         times = []
         cpus = []
         mems = []
@@ -580,7 +481,7 @@ def print_detailed_summary(results, detailed_results, dims):
     # 最大次元での詳細比較
     max_dim = max(dims)
     print(f"\n最大次元（{max_dim}）での詳細比較:")
-    for impl in implementations:
+    for impl in impl_list:
         if detailed_results[impl][max_dim]:
             result = detailed_results[impl][max_dim]
             print(f"  {impl}:")
@@ -589,36 +490,54 @@ def print_detailed_summary(results, detailed_results, dims):
             print(f"    メモリ使用量: {result.memory_usage:.1f} MB")
             print(f"    ピークメモリ: {result.memory_peak:.1f} MB")
             print(f"    スレッド数: {result.thread_count}")
-            print(f"    速度向上率: {result.speedup_vs_python:.2f}倍")
+            if 'python' in selected_implementations and impl != 'python':
+                print(f"    速度向上率: {result.speedup_vs_python:.2f}倍")
 
 def main():
+    # 利用可能な実装
+    available_implementations = {'python', 'numba', 'eigen', 'suitesparse'}
+    
+    # 比較する実装を選択（ここで変更可能）
+    # selected_implementations = {'python', 'numba', 'eigen', 'suitesparse'}  # 全実装
+    # selected_implementations = {'python', 'numba'}  # PythonとNumbaのみ
+    # selected_implementations = {'eigen', 'suitesparse'}  # C++実装のみ
+    selected_implementations = {'python', 'eigen', 'suitesparse'}  # PythonとEigenとSuiteSparseのみ
+    
+    # 選択された実装の妥当性チェック
+    invalid_impls = selected_implementations - available_implementations
+    if invalid_impls:
+        print(f"エラー: 無効な実装が指定されました: {invalid_impls}")
+        print(f"利用可能な実装: {available_implementations}")
+        return
+    
     # テストする行列サイズ
-    dims = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
-    num_repeats = 5 # 各サイズでの繰り返し回数
-    num_steps = 1000 # 時間発展のステップ数
+    dims = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+    num_repeats = 10  # 各サイズでの繰り返し回数
+    num_steps = 1000  # 時間発展のステップ数
     
     print("詳細ベンチマーク開始")
     print(f"- 行列サイズ: {dims}")
     print(f"- 繰り返し回数: {num_repeats}")
     print(f"- 時間発展ステップ数: {num_steps}")
-    print(f"- 実装: Python, Numba, C++ Eigen, C++ SuiteSparse")
+    print(f"- 選択された実装: {', '.join(sorted(selected_implementations))}")
     print(f"- 追加メトリクス: CPU使用率, メモリ使用量, スレッド数")
     
-    results, detailed_results = run_detailed_benchmark(dims, num_repeats, num_steps)
+    results, detailed_results = run_detailed_benchmark(dims, selected_implementations, num_repeats, num_steps)
     
     # 結果のサマリーを表示
-    print_detailed_summary(results, detailed_results, dims)
+    print_detailed_summary(results, detailed_results, dims, selected_implementations)
     
     # 結果をプロット
     print("\n=== Plotting Detailed Results ===")
-    plot_detailed_results(results, detailed_results, dims, num_steps, num_repeats)
+    plot_detailed_results(results, detailed_results, dims, selected_implementations, num_steps, num_repeats)
     
     # 結果をファイルに保存
     print("\n=== Saving Detailed Results ===")
-    save_detailed_benchmark_results(results, detailed_results, dims, savepath)
+    save_detailed_benchmark_results(results, detailed_results, dims, selected_implementations, savepath)
     
-    print("\n詳細ベンチマーク完了")
-    print(f"結果は{os.path.join(savepath, 'detailed_benchmark_all_implementations.png')}に保存されました")
+    impl_names = '_'.join(sorted(selected_implementations))
+    print(f"\n詳細ベンチマーク完了")
+    print(f"結果は{os.path.join(savepath, f'detailed_benchmark_{impl_names}.png')}に保存されました")
 
 if __name__ == "__main__":
     main() 
