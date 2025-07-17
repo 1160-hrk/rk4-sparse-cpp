@@ -227,8 +227,6 @@ set(SOURCES
 if(USE_OPENBLAS_SUITESPARSE)
     list(APPEND SOURCES 
         src/core/excitation_rk4_suitesparse.cpp
-        src/core/excitation_rk4_suitesparse_optimized.cpp
-        src/core/excitation_rk4_suitesparse_fast.cpp
     )
 endif()
 
@@ -236,8 +234,6 @@ endif()
 if(USE_SUITESPARSE_MKL)
     list(APPEND SOURCES 
         src/core/excitation_rk4_suitesparse.cpp
-        src/core/excitation_rk4_suitesparse_optimized.cpp
-        src/core/excitation_rk4_suitesparse_fast.cpp
     )
 endif()
 

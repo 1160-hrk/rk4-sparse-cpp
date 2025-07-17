@@ -161,7 +161,8 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
         double dt,
         bool return_traj,
         int stride,
-        bool renorm
+        bool renorm,
+        int level // 0: BASIC, 1: STANDARD, 2: ENHANCED
     ) {
         // 入力チェック
         if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
@@ -199,7 +200,7 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
             H0_mat, mux_mat, muy_mat,
             Ex_vec, Ey_vec,
             psi0_vec,
-            dt, return_traj, stride, renorm
+            dt, return_traj, stride, renorm, static_cast<OptimizationLevel>(level)
         );
     },
     py::arg("H0"),
@@ -211,143 +212,144 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
     py::arg("dt"),
     py::arg("return_traj"),
     py::arg("stride"),
-    py::arg("renorm")
+    py::arg("renorm"),
+    py::arg("level")
     );
     #endif
     
     // 最適化されたSuiteSparse版のバインディング
-    m.def("rk4_sparse_suitesparse_optimized", [](
-        const py::object& H0,
-        const py::object& mux,
-        const py::object& muy,
-        py::array_t<double,
-            py::array::c_style | py::array::forcecast> Ex,
-        py::array_t<double,
-            py::array::c_style | py::array::forcecast> Ey,
-        py::array_t<cplx,
-            py::array::c_style | py::array::forcecast> psi0,
-        double dt,
-        bool return_traj,
-        int stride,
-        bool renorm
-    ) {
-        // 入力チェック
-        if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
-            throw std::runtime_error("H0 must be a scipy.sparse.csr_matrix");
-        }
-        if (!py::hasattr(mux, "data") || !py::hasattr(mux, "indices") || !py::hasattr(mux, "indptr")) {
-            throw std::runtime_error("mux must be a scipy.sparse.csr_matrix");
-        }
-        if (!py::hasattr(muy, "data") || !py::hasattr(muy, "indices") || !py::hasattr(muy, "indptr")) {
-            throw std::runtime_error("muy must be a scipy.sparse.csr_matrix");
-        }
+    // m.def("rk4_sparse_suitesparse_optimized", [](
+    //     const py::object& H0,
+    //     const py::object& mux,
+    //     const py::object& muy,
+    //     py::array_t<double,
+    //         py::array::c_style | py::array::forcecast> Ex,
+    //     py::array_t<double,
+    //         py::array::c_style | py::array::forcecast> Ey,
+    //     py::array_t<cplx,
+    //         py::array::c_style | py::array::forcecast> psi0,
+    //     double dt,
+    //     bool return_traj,
+    //     int stride,
+    //     bool renorm
+    // ) {
+    //     // 入力チェック
+    //     if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
+    //         throw std::runtime_error("H0 must be a scipy.sparse.csr_matrix");
+    //     }
+    //     if (!py::hasattr(mux, "data") || !py::hasattr(mux, "indices") || !py::hasattr(mux, "indptr")) {
+    //         throw std::runtime_error("mux must be a scipy.sparse.csr_matrix");
+    //     }
+    //     if (!py::hasattr(muy, "data") || !py::hasattr(muy, "indices") || !py::hasattr(muy, "indptr")) {
+    //         throw std::runtime_error("muy must be a scipy.sparse.csr_matrix");
+    //     }
 
-        // バッファ情報の取得
-        py::buffer_info Ex_buf = Ex.request();
-        py::buffer_info Ey_buf = Ey.request();
-        py::buffer_info psi0_buf = psi0.request();
+    //     // バッファ情報の取得
+    //     py::buffer_info Ex_buf = Ex.request();
+    //     py::buffer_info Ey_buf = Ey.request();
+    //     py::buffer_info psi0_buf = psi0.request();
 
-        // 入力チェック
-        if (psi0_buf.ndim != 1) {
-            throw std::runtime_error("psi0 must be a 1D array");
-        }
+    //     // 入力チェック
+    //     if (psi0_buf.ndim != 1) {
+    //         throw std::runtime_error("psi0 must be a 1D array");
+    //     }
 
-        // CSR行列の構築
-        Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
-        Eigen::SparseMatrix<cplx> mux_mat = build_sparse_matrix_from_scipy(mux);
-        Eigen::SparseMatrix<cplx> muy_mat = build_sparse_matrix_from_scipy(muy);
+    //     // CSR行列の構築
+    //     Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
+    //     Eigen::SparseMatrix<cplx> mux_mat = build_sparse_matrix_from_scipy(mux);
+    //     Eigen::SparseMatrix<cplx> muy_mat = build_sparse_matrix_from_scipy(muy);
 
-        // 電場とpsi0の変換
-        Eigen::Map<const Eigen::VectorXd> Ex_vec(static_cast<double*>(Ex_buf.ptr), Ex_buf.shape[0]);
-        Eigen::Map<const Eigen::VectorXd> Ey_vec(static_cast<double*>(Ey_buf.ptr), Ey_buf.shape[0]);
-        Eigen::Map<const Eigen::VectorXcd> psi0_vec(static_cast<cplx*>(psi0_buf.ptr), psi0_buf.shape[0]);
+    //     // 電場とpsi0の変換
+    //     Eigen::Map<const Eigen::VectorXd> Ex_vec(static_cast<double*>(Ex_buf.ptr), Ex_buf.shape[0]);
+    //     Eigen::Map<const Eigen::VectorXd> Ey_vec(static_cast<double*>(Ey_buf.ptr), Ey_buf.shape[0]);
+    //     Eigen::Map<const Eigen::VectorXcd> psi0_vec(static_cast<cplx*>(psi0_buf.ptr), psi0_buf.shape[0]);
 
-        // 最適化されたSuiteSparse版の呼び出し
-        return rk4_sparse_suitesparse_optimized(
-            H0_mat, mux_mat, muy_mat,
-            Ex_vec, Ey_vec,
-            psi0_vec,
-            dt, return_traj, stride, renorm
-        );
-    },
-    py::arg("H0"),
-    py::arg("mux"),
-    py::arg("muy"),
-    py::arg("Ex"),
-    py::arg("Ey"),
-    py::arg("psi0"),
-    py::arg("dt"),
-    py::arg("return_traj"),
-    py::arg("stride"),
-    py::arg("renorm")
-    );
+    //     // 最適化されたSuiteSparse版の呼び出し
+    //     return rk4_sparse_suitesparse_optimized(
+    //         H0_mat, mux_mat, muy_mat,
+    //         Ex_vec, Ey_vec,
+    //         psi0_vec,
+    //         dt, return_traj, stride, renorm
+    //     );
+    // },
+    // py::arg("H0"),
+    // py::arg("mux"),
+    // py::arg("muy"),
+    // py::arg("Ex"),
+    // py::arg("Ey"),
+    // py::arg("psi0"),
+    // py::arg("dt"),
+    // py::arg("return_traj"),
+    // py::arg("stride"),
+    // py::arg("renorm")
+    // );
     
     // 高速SuiteSparse版のバインディング
-    m.def("rk4_sparse_suitesparse_fast", [](
-        const py::object& H0,
-        const py::object& mux,
-        const py::object& muy,
-        py::array_t<double,
-            py::array::c_style | py::array::forcecast> Ex,
-        py::array_t<double,
-            py::array::c_style | py::array::forcecast> Ey,
-        py::array_t<cplx,
-            py::array::c_style | py::array::forcecast> psi0,
-        double dt,
-        bool return_traj,
-        int stride,
-        bool renorm
-    ) {
-        // 入力チェック
-        if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
-            throw std::runtime_error("H0 must be a scipy.sparse.csr_matrix");
-        }
-        if (!py::hasattr(mux, "data") || !py::hasattr(mux, "indices") || !py::hasattr(mux, "indptr")) {
-            throw std::runtime_error("mux must be a scipy.sparse.csr_matrix");
-        }
-        if (!py::hasattr(muy, "data") || !py::hasattr(muy, "indices") || !py::hasattr(muy, "indptr")) {
-            throw std::runtime_error("muy must be a scipy.sparse.csr_matrix");
-        }
+    // m.def("rk4_sparse_suitesparse_fast", [](
+    //     const py::object& H0,
+    //     const py::object& mux,
+    //     const py::object& muy,
+    //     py::array_t<double,
+    //         py::array::c_style | py::array::forcecast> Ex,
+    //     py::array_t<double,
+    //         py::array::c_style | py::array::forcecast> Ey,
+    //     py::array_t<cplx,
+    //         py::array::c_style | py::array::forcecast> psi0,
+    //     double dt,
+    //     bool return_traj,
+    //     int stride,
+    //     bool renorm
+    // ) {
+    //     // 入力チェック
+    //     if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
+    //         throw std::runtime_error("H0 must be a scipy.sparse.csr_matrix");
+    //     }
+    //     if (!py::hasattr(mux, "data") || !py::hasattr(mux, "indices") || !py::hasattr(mux, "indptr")) {
+    //         throw std::runtime_error("mux must be a scipy.sparse.csr_matrix");
+    //     }
+    //     if (!py::hasattr(muy, "data") || !py::hasattr(muy, "indices") || !py::hasattr(muy, "indptr")) {
+    //         throw std::runtime_error("muy must be a scipy.sparse.csr_matrix");
+    //     }
 
-        // バッファ情報の取得
-        py::buffer_info Ex_buf = Ex.request();
-        py::buffer_info Ey_buf = Ey.request();
-        py::buffer_info psi0_buf = psi0.request();
+    //     // バッファ情報の取得
+    //     py::buffer_info Ex_buf = Ex.request();
+    //     py::buffer_info Ey_buf = Ey.request();
+    //     py::buffer_info psi0_buf = psi0.request();
 
-        // 入力チェック
-        if (psi0_buf.ndim != 1) {
-            throw std::runtime_error("psi0 must be a 1D array");
-        }
+    //     // 入力チェック
+    //     if (psi0_buf.ndim != 1) {
+    //         throw std::runtime_error("psi0 must be a 1D array");
+    //     }
 
-        // CSR行列の構築
-        Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
-        Eigen::SparseMatrix<cplx> mux_mat = build_sparse_matrix_from_scipy(mux);
-        Eigen::SparseMatrix<cplx> muy_mat = build_sparse_matrix_from_scipy(muy);
+    //     // CSR行列の構築
+    //     Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
+    //     Eigen::SparseMatrix<cplx> mux_mat = build_sparse_matrix_from_scipy(mux);
+    //     Eigen::SparseMatrix<cplx> muy_mat = build_sparse_matrix_from_scipy(muy);
 
-        // 電場とpsi0の変換
-        Eigen::Map<const Eigen::VectorXd> Ex_vec(static_cast<double*>(Ex_buf.ptr), Ex_buf.shape[0]);
-        Eigen::Map<const Eigen::VectorXd> Ey_vec(static_cast<double*>(Ey_buf.ptr), Ey_buf.shape[0]);
-        Eigen::Map<const Eigen::VectorXcd> psi0_vec(static_cast<cplx*>(psi0_buf.ptr), psi0_buf.shape[0]);
+    //     // 電場とpsi0の変換
+    //     Eigen::Map<const Eigen::VectorXd> Ex_vec(static_cast<double*>(Ex_buf.ptr), Ex_buf.shape[0]);
+    //     Eigen::Map<const Eigen::VectorXd> Ey_vec(static_cast<double*>(Ey_buf.ptr), Ey_buf.shape[0]);
+    //     Eigen::Map<const Eigen::VectorXcd> psi0_vec(static_cast<cplx*>(psi0_buf.ptr), psi0_buf.shape[0]);
 
-        // 高速SuiteSparse版の呼び出し
-        return rk4_sparse_suitesparse_fast(
-            H0_mat, mux_mat, muy_mat,
-            Ex_vec, Ey_vec,
-            psi0_vec,
-            dt, return_traj, stride, renorm
-        );
-    },
-    py::arg("H0"),
-    py::arg("mux"),
-    py::arg("muy"),
-    py::arg("Ex"),
-    py::arg("Ey"),
-    py::arg("psi0"),
-    py::arg("dt"),
-    py::arg("return_traj"),
-    py::arg("stride"),
-    py::arg("renorm")
-    );
+    //     // 高速SuiteSparse版の呼び出し
+    //     return rk4_sparse_suitesparse_fast(
+    //         H0_mat, mux_mat, muy_mat,
+    //         Ex_vec, Ey_vec,
+    //         psi0_vec,
+    //         dt, return_traj, stride, renorm
+    //     );
+    // },
+    // py::arg("H0"),
+    // py::arg("mux"),
+    // py::arg("muy"),
+    // py::arg("Ex"),
+    // py::arg("Ey"),
+    // py::arg("psi0"),
+    // py::arg("dt"),
+    // py::arg("return_traj"),
+    // py::arg("stride"),
+    // py::arg("renorm")
+    // );
     
     m.def("get_omp_max_threads", []() {
         #ifdef _OPENMP

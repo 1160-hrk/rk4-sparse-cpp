@@ -24,7 +24,8 @@ namespace excitation_rk4_sparse {
 
 static SuiteSparsePerformanceMetrics current_metrics;
 
-// SuiteSparse-MKL版のRK4実装
+// 旧来の3関数を統合した新しい関数
+// OptimizationLevelで分岐（現状は挙動同じだが将来拡張可能）
 Eigen::MatrixXcd rk4_sparse_suitesparse(
     const Eigen::SparseMatrix<std::complex<double>>& H0,
     const Eigen::SparseMatrix<std::complex<double>>& mux,
@@ -35,8 +36,9 @@ Eigen::MatrixXcd rk4_sparse_suitesparse(
     double dt,
     bool return_traj,
     int stride,
-    bool renorm)
-{
+    bool renorm,
+    OptimizationLevel level
+) {
     using Clock = std::chrono::high_resolution_clock;
     using Duration = std::chrono::duration<double>;
     using cplx = std::complex<double>;

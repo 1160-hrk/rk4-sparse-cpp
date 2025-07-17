@@ -30,17 +30,13 @@ except ImportError as e:                              # ビルド無しでもパ
 # OpenBLAS + SuiteSparse実装
 try:
     from ._rk4_sparse_cpp import (
-        rk4_sparse_suitesparse, 
-        rk4_sparse_suitesparse_optimized,  # 最適化版
-        rk4_sparse_suitesparse_fast,       # 高速版も有効化
+        rk4_sparse_suitesparse,
         benchmark_implementations
     )
     OPENBLAS_SUITESPARSE_AVAILABLE = True
     print("Info: OpenBLAS + SuiteSparse version available")
 except ImportError as e:
     rk4_sparse_suitesparse = None
-    rk4_sparse_suitesparse_optimized = None
-    rk4_sparse_suitesparse_fast = None
     benchmark_implementations = None
     OPENBLAS_SUITESPARSE_AVAILABLE = False
     print(f"Warning: OpenBLAS + SuiteSparse version not available: {e}")
@@ -60,9 +56,6 @@ __all__ = [
     "rk4_numba_py",
     "rk4_sparse_eigen",
     "rk4_sparse_suitesparse",
-    "rk4_sparse_suitesparse_optimized",  # 最適化版
-    "rk4_sparse_suitesparse_fast",       # 高速版も有効化
-    "rk4_sparse_suitesparse_mkl",
     "benchmark_implementations",
     "create_test_matrices",
     "create_test_pulse",

@@ -12,7 +12,12 @@ import matplotlib.pyplot as plt
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../python'))
 
-from rk4_sparse import rk4_sparse_py, rk4_numba_py, rk4_sparse_eigen, rk4_sparse_suitesparse
+try:
+    from rk4_sparse import rk4_sparse_py, rk4_numba_py, rk4_sparse_eigen, rk4_sparse_suitesparse
+except ImportError as e:
+    print(f"Warning: Could not import rk4_sparse: {e}")
+    print("Please make sure the module is built and installed correctly.")
+    sys.exit(1)
 
 savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
 os.makedirs(savepath, exist_ok=True)
@@ -110,7 +115,8 @@ def run_benchmark(dims, num_repeats=100, num_steps=1000):
                     dt_E*2,
                     True,
                     1,
-                    False
+                    False,
+                    1  # level=1 (STANDARD)
                 )
                 end_time = time.time()
                 results['suitesparse'][dim].append(end_time - start_time)
@@ -232,7 +238,8 @@ def plot_results(results, speedups, dims):
             labels.append(impl)
     
     if stats_data:
-        plt.boxplot(stats_data, labels=labels)
+        plt.boxplot(stats_data)
+        plt.xticks(range(1, len(labels) + 1), labels)
         plt.ylabel('Execution Time (seconds)')
         plt.title(f'Performance Distribution (dim={max_dim})')
         plt.grid(True)
