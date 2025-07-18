@@ -77,7 +77,7 @@ jobs:
         # ビルド前 hook
         CIBW_BEFORE_BUILD: |
           pip install -U pip
-          pip install "numpy~=2.0" "pybind11>=3.0"
+          pip install "numpy~=2.0" "pybind11>=3.0" "setuptools>=64" "wheel>=0.40"
       run: cibuildwheel --output-dir dist
 
     # -----------------------------------------------------------------------

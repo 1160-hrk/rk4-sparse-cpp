@@ -42,26 +42,64 @@ if(NOT Python3_FOUND AND NOT Python_FOUND)
     message(FATAL_ERROR "Python not found. Please install Python development headers.")
 endif()
 
-# pybind11の手動設定
-find_path(PYBIND11_INCLUDE_DIR pybind11/pybind11.h
-    PATHS
-    /usr/include
-    /usr/local/include
-    /opt/homebrew/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/pybind11/include
-)
+# pybind11の検出（複数の方法を試行）
+find_package(pybind11 CONFIG QUIET)
+if(NOT pybind11_FOUND)
+    find_package(pybind11 MODULE QUIET)
+endif()
 
-if(PYBIND11_INCLUDE_DIR)
-    set(pybind11_INCLUDE_DIRS ${PYBIND11_INCLUDE_DIR})
-    set(pybind11_FOUND TRUE)
-    message(STATUS "Found pybind11: ${PYBIND11_INCLUDE_DIR}")
-else()
+if(NOT pybind11_FOUND)
+    # 手動設定（フォールバック）
+    find_path(PYBIND11_INCLUDE_DIR pybind11/pybind11.h
+        PATHS
+        /usr/include
+        /usr/local/include
+        /opt/homebrew/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/pybind11/include
+        ${Python_SITELIB}/pybind11/include
+        ${Python_SITEARCH}/pybind11/include
+    )
+    
+    if(PYBIND11_INCLUDE_DIR)
+        set(pybind11_INCLUDE_DIRS ${PYBIND11_INCLUDE_DIR})
+        set(pybind11_FOUND TRUE)
+        message(STATUS "Found pybind11 manually: ${PYBIND11_INCLUDE_DIR}")
+        
+        # pybind11のツールを手動で読み込み
+        find_file(PYBIND11_TOOLS_CMAKE pybind11Tools.cmake
+            PATHS
+            /usr/lib/cmake/pybind11
+            /usr/local/lib/cmake/pybind11
+            /opt/homebrew/lib/cmake/pybind11
+            ${Python_SITELIB}/pybind11/share/cmake/pybind11
+            ${Python_SITEARCH}/pybind11/share/cmake/pybind11
+        )
+        
+        if(PYBIND11_TOOLS_CMAKE)
+            include(${PYBIND11_TOOLS_CMAKE})
+            message(STATUS "Loaded pybind11 tools from: ${PYBIND11_TOOLS_CMAKE}")
+        else()
+            message(WARNING "pybind11 tools not found, trying alternative paths")
+            # 代替パスを試行
+            find_file(PYBIND11_TOOLS_CMAKE pybind11Tools.cmake
+                PATHS
+                /usr/share/cmake/pybind11
+                /usr/local/share/cmake/pybind11
+                /opt/homebrew/share/cmake/pybind11
+            )
+            if(PYBIND11_TOOLS_CMAKE)
+                include(${PYBIND11_TOOLS_CMAKE})
+                message(STATUS "Loaded pybind11 tools from alternative path: ${PYBIND11_TOOLS_CMAKE}")
+            endif()
+        endif()
+    endif()
+endif()
+
+if(NOT pybind11_FOUND)
     message(FATAL_ERROR "pybind11 not found. Please install pybind11 development headers.")
 endif()
 
-# pybind11のツールを読み込み
-include(/usr/lib/cmake/pybind11/pybind11Config.cmake)
-include(/usr/lib/cmake/pybind11/pybind11Tools.cmake)
+message(STATUS "Found pybind11: ${pybind11_INCLUDE_DIRS}")
 
 # Pythonの設定をpybind11に明示的に渡す
 if(Python3_FOUND)
