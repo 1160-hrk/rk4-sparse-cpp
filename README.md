@@ -5,25 +5,27 @@
 ## 機能
 - CSR形式の疎行列サポート
 - OpenMPによる並列化（動的スケジューリング最適化）
-- Python/C++のハイブリッド実装
-- **新機能**: SuiteSparse-MKLサポート
-  - Intel MKL Sparse BLASによる高速化
-  - Eigen版との自動切り替え
-  - 性能比較機能
+- 複数の実装バリエーション
+  - **Python実装**: 開発・デバッグ用
+  - **Numba実装**: 小次元での高速化
+  - **Eigen実装**: 標準的なC++実装
+  - **Eigen_Cached実装**: 大次元での最適化
+  - **Eigen_Direct_CSR実装**: 小次元での最高性能
+  - **SuiteSparse実装**: メモリ効率重視
+  - **SuiteSparse-MKL実装**: Intel MKLによる最速実装
 - 包括的なベンチマーク機能
-  - 2準位系と調和振動子のテストケース
-  - 詳細なパフォーマンス分析
-  - 解析解との比較
-  - **新機能**: 実装間の速度比較
+  - 実装間の詳細な性能比較
+  - 次元別最適化推奨
+  - メモリ使用量・CPU使用率分析
 - メモリ最適化
   - キャッシュライン境界を考慮したアライメント
   - 疎行列パターンの再利用
 
 ## バージョン情報
-- 現在のバージョン: v0.2.5
+- 現在のバージョン: v0.2.6
 - ステータス: 安定版
-- 最終更新: 2024-07-15
-- **新機能**: プロジェクト構造の大幅改善、性能問題の解決
+- 最終更新: 2025-07-18
+- **新機能**: 複数実装の統合、詳細なベンチマーク分析
 
 ## 必要条件
 - Python 3.10以上
@@ -78,7 +80,10 @@ python examples/python/benchmark_ho.py
 from rk4_sparse import (
     rk4_sparse_py, 
     rk4_sparse_eigen, 
+    rk4_sparse_eigen_cached,
+    rk4_sparse_eigen_direct_csr,
     rk4_sparse_suitesparse,
+    rk4_sparse_suitesparse_mkl,
     benchmark_implementations
 )
 
@@ -86,50 +91,91 @@ from rk4_sparse import (
 # import sys
 # import os
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
-# from rk4_sparse import rk4_sparse_py, rk4_sparse_eigen, rk4_sparse_suitesparse
+# from rk4_sparse import *
 
-# Python実装
+# Python実装（開発・デバッグ用）
 result_py = rk4_sparse_py(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
 
-# Eigen版（高速）
+# Eigen版（標準的なC++実装）
 result_eigen = rk4_sparse_eigen(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
 
-# SuiteSparse-MKL版（最速、利用可能な場合）
+# Eigen_Cached版（大次元での最適化）
+if rk4_sparse_eigen_cached is not None:
+    result_cached = rk4_sparse_eigen_cached(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
+
+# Eigen_Direct_CSR版（小次元での最高性能）
+if rk4_sparse_eigen_direct_csr is not None:
+    result_direct = rk4_sparse_eigen_direct_csr(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
+
+# SuiteSparse版（メモリ効率重視）
 if rk4_sparse_suitesparse is not None:
     result_suitesparse = rk4_sparse_suitesparse(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
 
+# SuiteSparse-MKL版（最速、Intel MKL利用）
+if rk4_sparse_suitesparse_mkl is not None:
+    result_mkl = rk4_sparse_suitesparse_mkl(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm)
+
 # 実装間のベンチマーク
 results = benchmark_implementations(H0, mux, muy, Ex, Ey, psi0, dt, return_traj, stride, renorm, num_runs=5)
-```
+
+# 利用可能な実装の確認
+print(f"Eigen available: {rk4_sparse_eigen is not None}")
+print(f"Eigen_Cached available: {rk4_sparse_eigen_cached is not None}")
+print(f"Eigen_Direct_CSR available: {rk4_sparse_eigen_direct_csr is not None}")
+print(f"SuiteSparse available: {rk4_sparse_suitesparse is not None}")
+print(f"SuiteSparse-MKL available: {rk4_sparse_suitesparse_mkl is not None}")
 
 ### 例題
 すべての例は`examples/python/`ディレクトリにあります：
 
 1. **基本例**
 ```bash
-python examples/python/two_level_excitation.py  # 2準位励起
+python examples/python/two_level_excitation.py  # 2準位励起（Python/C++比較）
 ```
 
 2. **ベンチマーク**
 ```bash
-python examples/python/benchmark_ho.py         # 調和振動子系での比較
+python examples/python/benchmark_ho.py         # 調和振動子系での全実装比較
+```
+
+3. **詳細分析**
+```bash
+# ベンチマーク結果の詳細分析
+python examples/python/analyze_benchmark_results.py
 ```
 
 ## ベンチマーク
-以下のスクリプトで様々なベンチマークを実行できます：
 
-1. 実装間の比較
+### 最新の性能結果（2025年1月）
+
+#### 実装別性能比較
+| 実装 | 小次元(<128) | 中次元(128-1024) | 大次元(>1024) | メモリ効率 | 推奨用途 |
+|------|-------------|-----------------|---------------|-----------|----------|
+| **Eigen_Direct_CSR** | **最高** | 良好 | 劣化 | 高 | 小次元リアルタイム |
+| **Eigen_Cached** | 良好 | 良好 | **最高** | 高 | 汎用・大次元 |
+| **Eigen** | 良好 | 良好 | 良好 | 高 | 標準 |
+| **SuiteSparse** | 良好 | 良好 | 良好 | **最高** | メモリ制約環境 |
+| **Numba** | 良好 | 劣化 | **不可** | 低 | 小次元のみ |
+| **Python** | 基準 | 基準 | 基準 | 中 | 開発・デバッグ |
+
+#### 高速化倍率（Python基準）
+- **小次元（2-64）**: 100倍以上の高速化
+- **中次元（128-512）**: 10-50倍の高速化
+- **大次元（1024+）**: 1-5倍の高速化
+
+### ベンチマーク実行
 ```bash
-python examples/python/benchmark_ho.py         # 調和振動子系での比較
-python test_suitesparse.py                     # SuiteSparse-MKL版のテスト
+# 全実装の比較
+python examples/python/benchmark_ho.py
+
+# 2準位系のテスト
+python examples/python/two_level_excitation.py
+
+# 詳細分析
+python examples/python/analyze_benchmark_results.py
 ```
 
-2. 2準位系のテスト
-```bash
-python examples/python/two_level_excitation.py # 2準位励起のテスト
-```
-
-3. 新しいベンチマーク機能
+### プログラム内での比較
 ```python
 # 実装間の速度比較
 results = benchmark_implementations(H0, mux, muy, Ex, Ey, psi0, dt, True, 1, False, 5)
@@ -139,25 +185,47 @@ for result in results:
 
 ## 性能
 
-最新のベンチマーク結果（2025年7月15日）による高性能を実現：
+### 詳細な性能比較（2025年1月）
 
-| システムサイズ | scipy.sparse [ms] | numba [ms] | C++ [ms] | C++ vs scipy | C++ vs numba |
-|-------------:|------------------:|-----------:|----------:|-------------:|-------------:|
-| 2レベル       | 11.6              | 0.2        | 0.1       | **110x**     | **2.0x**     |
-| 4レベル       | 10.7              | 0.2        | 0.1       | **116x**     | **2.6x**     |
-| 8レベル       | 11.0              | 0.4        | 0.1       | **75x**      | **2.9x**     |
-| 16レベル      | 10.9              | 1.1        | 0.2       | **53x**      | **5.5x**     |
-| 32レベル      | 11.5              | 3.8        | 0.3       | **34x**      | **11.3x**    |
-| 64レベル      | 12.3              | 13.6       | 0.6       | **20x**      | **22.5x**    |
-| 128レベル     | 13.9              | 55.1       | 1.2       | **12x**      | **46.9x**    |
-| 256レベル     | 17.5              | 230.5      | 2.4       | **7.3x**     | **96.0x**    |
+#### 実行時間比較（ミリ秒）
+| 次元 | Python | Numba | Eigen | Eigen_Cached | Eigen_Direct_CSR | SuiteSparse |
+|------|--------|-------|-------|--------------|------------------|-------------|
+| 2    | 11.75  | 0.17  | 0.075 | 0.076        | **0.071**        | 0.081       |
+| 4    | 12.18  | 0.26  | 0.090 | 0.089        | **0.086**        | 0.091       |
+| 8    | 12.90  | 0.44  | 0.118 | 0.121        | 0.132            | 0.123       |
+| 16   | 12.60  | 1.20  | 0.179 | 0.188        | **0.178**        | 0.180       |
+| 32   | 12.65  | 3.72  | 0.304 | 0.308        | **0.302**        | 0.307       |
+| 64   | 13.70  | 14.28 | 0.554 | **0.526**    | 0.549            | 0.539       |
+| 128  | 15.09  | 59.99 | 1.104 | **1.056**    | 1.072            | 1.052       |
+| 256  | 18.80  | 271.33| 2.299 | 2.622        | 2.858            | **2.204**    |
+| 512  | 28.41  | 994.41| 5.792 | **5.059**    | 8.504            | 7.052       |
+| 1024 | 38.49  | 3954.5| 14.785| **10.704**   | 14.288           | 14.944      |
+| 2048 | 66.62  | -     | 34.796| **22.810**   | -                | 32.717      |
+| 4096 | 103.88 | -     | 86.663| **42.129**   | -                | 86.115      |
+
+#### 高速化倍率（Python基準）
+| 次元 | Numba | Eigen | Eigen_Cached | Eigen_Direct_CSR | SuiteSparse |
+|------|-------|-------|--------------|------------------|-------------|
+| 2    | 67.4x | 155.9x| 154.0x       | **164.8x**       | 145.3x      |
+| 4    | 46.5x | 134.8x| 136.8x       | **141.7x**       | 133.2x      |
+| 8    | 29.2x | 109.1x| 106.3x       | 97.9x            | 105.2x      |
+| 16   | 10.5x | 70.4x | 67.1x        | **70.7x**        | 70.2x       |
+| 32   | 3.4x  | 41.7x | 41.1x        | **41.9x**        | 41.3x       |
+| 64   | 1.0x  | 24.7x | **26.0x**    | 25.0x            | 25.4x       |
+| 128  | 0.3x  | 13.7x | **14.3x**    | 14.1x            | 14.3x       |
+| 256  | 0.07x | 8.2x  | 7.2x         | 6.6x             | **8.5x**    |
+| 512  | 0.03x | 4.9x  | **5.6x**     | 3.3x            | 4.0x        |
+| 1024 | 0.01x | 2.6x  | **3.6x**     | 2.7x            | 2.6x        |
+| 2048 | -     | 1.9x  | **2.9x**     | -               | 2.0x        |
+| 4096 | -     | 1.2x  | **2.5x**     | -               | 1.2x        |
 
 ## 最適化の特徴
 
-### v0.2.0での主要改善
-1. **条件付きデバッグ出力**: I/Oオーバーヘッドの除去
-2. **適応的並列化**: 小規模データでのOpenMPオーバーヘッド回避
-3. **最適化されたスケジューリング**: 静的スケジューリングによる効率化
+### v0.2.6での主要改善
+1. **複数実装の統合**: 6つの異なる実装バリエーション
+2. **キャッシュ最適化**: 大次元での顕著な性能向上（最大50%改善）
+3. **次元別最適化**: 用途に応じた最適実装の自動選択
+4. **詳細なベンチマーク**: 包括的な性能分析機能
 
 ### コア技術
 1. **メモリアライメント**
@@ -169,9 +237,14 @@ for result in results:
    - 静的スケジューリング最適化
 
 3. **疎行列最適化**
-   - 非ゼロパターンの事前計算
+   - 非ゼロパターンの事前計算とキャッシュ
    - データ構造の再利用
    - 効率的な行列-ベクトル積
+
+4. **実装別最適化**
+   - **Eigen_Direct_CSR**: 小次元での直接CSR操作
+   - **Eigen_Cached**: 大次元でのキャッシュ効果活用
+   - **SuiteSparse**: メモリ効率重視の最適化
 
 ## ドキュメント
 
@@ -185,7 +258,15 @@ for result in results:
   - [性能回帰問題の分析と解決](docs/troubleshooting/performance_regression_analysis.md)
 
 - **ベンチマーク結果**
-  - [性能測定結果](docs/benchmarks/performance_results.md)
+  - [詳細な性能比較分析](docs/development/benchmark_comparison_analysis_20250718.md)
+  - [統計サマリー](docs/development/benchmark_summary_statistics.csv)
+
+- **実装選択ガイド**
+  - **小次元（<128）**: Eigen_Direct_CSR
+  - **中次元（128-1024）**: Eigen_Cached
+  - **大次元（>1024）**: Eigen_Cached
+  - **メモリ制約環境**: SuiteSparse
+  - **開発・デバッグ**: Python実装
 
 ## ライセンス
 MITライセンス
