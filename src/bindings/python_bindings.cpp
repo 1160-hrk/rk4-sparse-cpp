@@ -47,10 +47,22 @@ Eigen::SparseMatrix<std::complex<double>> build_sparse_matrix_from_scipy(
     int rows = scipy_sparse_matrix.attr("shape").attr("__getitem__")(0).cast<int>();
     int cols = scipy_sparse_matrix.attr("shape").attr("__getitem__")(1).cast<int>();
 
-    /* ★ indptr[-1] と data.size を検証 */
-    if (indptr.size() != rows + 1 ||
-        indptr.at(indptr.size() - 1) != data.size())
-        throw py::value_error("inconsistent CSR structure");
+    /* ★ 境界チェックを強化 */
+    if (rows <= 0 || cols <= 0) {
+        throw py::value_error("matrix dimensions must be positive");
+    }
+    
+    if (indptr.size() != rows + 1) {
+        throw py::value_error("indptr size must be rows + 1");
+    }
+    
+    if (indptr.at(indptr.size() - 1) != data.size()) {
+        throw py::value_error("inconsistent CSR structure: indptr[-1] != data.size");
+    }
+    
+    if (indices.size() != data.size()) {
+        throw py::value_error("inconsistent CSR structure: indices.size != data.size");
+    }
 
     // 最適化：直接CSR形式でEigen行列を構築
     Eigen::SparseMatrix<std::complex<double>> mat(rows, cols);
@@ -60,14 +72,30 @@ Eigen::SparseMatrix<std::complex<double>> build_sparse_matrix_from_scipy(
     auto indices_ptr = static_cast<int*>(indices.request().ptr);
     auto indptr_ptr = static_cast<int*>(indptr.request().ptr);
     
-    // 最適化された構築：Triplet形式を避けて直接CSR形式を使用
+    // 境界チェック付きの構築
     for (int i = 0; i < rows; ++i) {
-        for (int j = indptr_ptr[i]; j < indptr_ptr[i + 1]; ++j) {
-            mat.insert(i, indices_ptr[j]) = data_ptr[j];
+        int start = indptr_ptr[i];
+        int end = indptr_ptr[i + 1];
+        
+        // 境界チェック
+        if (start < 0 || end < start || end > data.size()) {
+            throw py::value_error("invalid indptr values");
+        }
+        
+        for (int j = start; j < end; ++j) {
+            int col_idx = indices_ptr[j];
+            
+            // 境界チェック
+            if (col_idx < 0 || col_idx >= cols) {
+                throw py::value_error("invalid column index");
+            }
+            
+            mat.insert(i, col_idx) = data_ptr[j];
         }
     }
     
     mat.makeCompressed();
+    
     return mat;
 }
 
@@ -205,6 +233,51 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
         "Optimized RK4 implementation with direct CSR format processing"
     );
     
+    // Phase 4: BLAS最適化版のバインディング
+    m.def("rk4_sparse_blas_optimized", &rk4_sparse_blas_optimized,
+        py::arg("H0"),
+        py::arg("mux"),
+        py::arg("muy"),
+        py::arg("Ex"),
+        py::arg("Ey"),
+        py::arg("psi0"),
+        py::arg("dt"),
+        py::arg("return_traj") = false,
+        py::arg("stride") = 1,
+        py::arg("renorm") = false,
+        "BLAS最適化版のRK4実装（8192次元問題対応）"
+    );
+    
+    // より効率的なBLAS最適化版のバインディング
+    m.def("rk4_sparse_blas_optimized_efficient", &rk4_sparse_blas_optimized_efficient,
+        py::arg("H0"),
+        py::arg("mux"),
+        py::arg("muy"),
+        py::arg("Ex"),
+        py::arg("Ey"),
+        py::arg("psi0"),
+        py::arg("dt"),
+        py::arg("return_traj") = false,
+        py::arg("stride") = 1,
+        py::arg("renorm") = false,
+        "より効率的なBLAS最適化版のRK4実装（メモリ割り当て最小化）"
+    );
+    
+    // 安全なBLAS最適化版のバインディング
+    m.def("rk4_sparse_blas_optimized_safe", &rk4_sparse_blas_optimized_safe,
+        py::arg("H0"),
+        py::arg("mux"),
+        py::arg("muy"),
+        py::arg("Ex"),
+        py::arg("Ey"),
+        py::arg("psi0"),
+        py::arg("dt"),
+        py::arg("return_traj") = false,
+        py::arg("stride") = 1,
+        py::arg("renorm") = false,
+        "安全なBLAS最適化版のRK4実装（セグメンテーション違反対策済み）"
+    );
+    
     m.def("rk4_sparse_eigen", [](
         const py::object& H0,
         const py::object& mux,
@@ -269,6 +342,73 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
     py::arg("return_traj"),
     py::arg("stride"),
     py::arg("renorm")
+    );
+    
+    m.def("rk4_sparse_eigen_cached", [](
+        const py::object& H0,
+        const py::object& mux,
+        const py::object& muy,
+        py::array_t<double,
+            py::array::c_style | py::array::forcecast> Ex,
+        py::array_t<double,
+            py::array::c_style | py::array::forcecast> Ey,
+        py::array_t<cplx,
+            py::array::c_style | py::array::forcecast> psi0,
+        double dt,
+        bool return_traj,
+        int stride,
+        bool renorm
+    ) {
+        // 入力チェック
+        if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
+            throw std::runtime_error("H0 must be a scipy.sparse.csr_matrix");
+        }
+        if (!py::hasattr(mux, "data") || !py::hasattr(mux, "indices") || !py::hasattr(mux, "indptr")) {
+            throw std::runtime_error("mux must be a scipy.sparse.csr_matrix");
+        }
+        if (!py::hasattr(muy, "data") || !py::hasattr(muy, "indices") || !py::hasattr(muy, "indptr")) {
+            throw std::runtime_error("muy must be a scipy.sparse.csr_matrix");
+        }
+
+        // バッファ情報の取得
+        py::buffer_info Ex_buf = Ex.request();
+        py::buffer_info Ey_buf = Ey.request();
+        py::buffer_info psi0_buf = psi0.request();
+
+        // 入力チェック
+        if (psi0_buf.ndim != 1) {
+            throw std::runtime_error("psi0 must be a 1D array");
+        }
+
+        // 最適化されたCSR行列の構築
+        Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
+        Eigen::SparseMatrix<cplx> mux_mat = build_sparse_matrix_from_scipy(mux);
+        Eigen::SparseMatrix<cplx> muy_mat = build_sparse_matrix_from_scipy(muy);
+
+        // 電場とpsi0の変換
+        Eigen::Map<const Eigen::VectorXd> Ex_vec(static_cast<double*>(Ex_buf.ptr), Ex_buf.shape[0]);
+        Eigen::Map<const Eigen::VectorXd> Ey_vec(static_cast<double*>(Ey_buf.ptr), Ey_buf.shape[0]);
+        Eigen::Map<const Eigen::VectorXcd> psi0_vec(static_cast<cplx*>(psi0_buf.ptr), psi0_buf.shape[0]);
+
+        // rk4_sparse_eigen_cachedの呼び出し
+        return rk4_sparse_eigen_cached(
+            H0_mat, mux_mat, muy_mat,
+            Ex_vec, Ey_vec,
+            psi0_vec,
+            dt, return_traj, stride, renorm
+        );
+    },
+    py::arg("H0"),
+    py::arg("mux"),
+    py::arg("muy"),
+    py::arg("Ex"),
+    py::arg("Ey"),
+    py::arg("psi0"),
+    py::arg("dt"),
+    py::arg("return_traj"),
+    py::arg("stride"),
+    py::arg("renorm") = false,
+    "パターン構築・データ展開のキャッシュ化を行う高速版RK4実装"
     );
     
     // OpenBLAS + SuiteSparse版のバインディング（利用可能な場合）
@@ -350,6 +490,48 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
         #endif
     }, "Get the maximum number of OpenMP threads");
     
+    // BLAS専用のスパース行列-ベクトル積テスト関数
+    m.def("test_blas_sparse_multiply", [](
+        const py::object& H0,
+        py::array_t<cplx,
+            py::array::c_style | py::array::forcecast> psi0
+    ) {
+        // 入力チェック
+        if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
+            throw std::runtime_error("H0 must be a scipy.sparse.csr_matrix");
+        }
+
+        // バッファ情報の取得
+        py::buffer_info psi0_buf = psi0.request();
+
+        // 入力チェック
+        if (psi0_buf.ndim != 1) {
+            throw std::runtime_error("psi0 must be a 1D array");
+        }
+
+        // 最適化されたCSR行列の構築
+        Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
+        
+        // psi0の変換
+        Eigen::Map<const Eigen::VectorXcd> psi0_vec(static_cast<cplx*>(psi0_buf.ptr), psi0_buf.shape[0]);
+
+        // 結果ベクトルの初期化
+        Eigen::VectorXcd result = Eigen::VectorXcd::Zero(psi0_vec.size());
+
+        // BLAS最適化版のスパース行列-ベクトル積を実行
+        auto data_ptr = static_cast<std::complex<double>*>(H0_mat.valuePtr());
+        auto indices_ptr = static_cast<int*>(H0_mat.innerIndexPtr());
+        auto indptr_ptr = static_cast<int*>(H0_mat.outerIndexPtr());
+
+        blas_optimized_sparse_matrix_vector_multiply(data_ptr, indices_ptr, indptr_ptr, psi0_vec, result, H0_mat.rows());
+
+        return result;
+    },
+    py::arg("H0"),
+    py::arg("psi0"),
+    "BLAS最適化版のスパース行列-ベクトル積テスト関数"
+    );
+    
     // ベンチマーク実装関数
     m.def("benchmark_implementations", [](
         const py::object& H0,
@@ -417,5 +599,28 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
     py::arg("return_traj"),
     py::arg("stride"),
     py::arg("renorm")
+    );
+    
+    // 簡単なテスト関数を追加（デバッグ用）
+    m.def("test_basic_sparse_multiply", [](
+        const py::object& H0,
+        const Eigen::Ref<const Eigen::VectorXcd>& x
+    ) {
+        // 入力チェック
+        if (!py::hasattr(H0, "data") || !py::hasattr(H0, "indices") || !py::hasattr(H0, "indptr")) {
+            throw std::runtime_error("H0 must be a scipy.sparse.csr_matrix");
+        }
+        
+        // 最適化されたCSR行列の構築
+        Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
+        
+        // 基本的なスパース行列-ベクトル積
+        Eigen::VectorXcd y = H0_mat * x;
+        
+        return y;
+    },
+    py::arg("H0"),
+    py::arg("x"),
+    "基本的なスパース行列-ベクトル積のテスト"
     );
 } 
