@@ -1,0 +1,7 @@
+Implementation,Min_Speedup,Max_Speedup,Avg_Speedup,Std_Speedup,Best_Dimension,Worst_Dimension,Memory_Efficiency,CPU_Efficiency,Stability_Score
+Python,1.0,1.0,1.0,0.0,2,32768,Low,Medium,High
+Numba,0.01,67.4,8.2,15.3,2,1024,Low,High,Low
+Eigen,0.2,155.9,25.1,35.2,2,32768,High,High,High
+Eigen_Cached,0.4,154.0,36.2,42.1,2,32768,High,High,High
+Eigen_Direct_CSR,0.95,164.8,28.7,38.9,2,512,High,High,Medium
+SuiteSparse,0.94,145.3,24.8,34.7,2,4096,Very_High,High,High 

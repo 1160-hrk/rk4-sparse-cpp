@@ -16,7 +16,7 @@ import time
 import numpy as np
 from scipy import sparse
 import matplotlib.pyplot as plt
-from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
+from rk4_sparse import rk4_sparse_py, rk4_sparse_eigen
 from harmonic_oscillator import create_ho_matrices, create_gaussian_pulse
 
 savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
@@ -83,7 +83,7 @@ class HOBenchmark:
     def run_cpp(self):
         """Run C++ implementation and measure time"""
         start_time = time.time()
-        result = rk4_sparse_cpp(
+        result = rk4_sparse_eigen(
             self.H0, self.mux, self.muy,
             self.Ex, self.Ey,
             self.psi0,

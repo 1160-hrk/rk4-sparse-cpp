@@ -9,11 +9,11 @@ import scipy.sparse as sp
 import time
 import sys
 import os
-# sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-# sys.path.append(os.path.join(os.path.dirname(__file__), '../../python'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../python'))
 # rk4_sparse_cppモジュールをインポート
 try:
-    from rk4_sparse._rk4_sparse_cpp import rk4_sparse_blas_optimized, rk4_sparse_eigen
+    from rk4_sparse import rk4_sparse_blas_optimized, rk4_sparse_eigen
     print("✓ rk4_sparse_cppモジュールのインポート成功")
 except ImportError as e:
     print(f"✗ rk4_sparse_cppモジュールのインポート失敗: {e}")

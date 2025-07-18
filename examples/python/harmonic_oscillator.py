@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python')
 import numpy as np
 from scipy import sparse
 import matplotlib.pyplot as plt
-from rk4_sparse import rk4_sparse_py, rk4_sparse_cpp
+from rk4_sparse import rk4_sparse_py, rk4_sparse_eigen
 
 savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
 os.makedirs(savepath, exist_ok=True)
@@ -140,7 +140,7 @@ def main():
     # C++実装での計算
     print("\nRunning C++ implementation...")
     start_time = time.time()
-    result_cpp = rk4_sparse_cpp(
+    result_cpp = rk4_sparse_eigen(
         H0, mux, muy,
         Ex, Ey,
         psi0,
