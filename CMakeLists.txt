@@ -93,10 +93,21 @@ endif()
 option(USE_OPENBLAS_SUITESPARSE "Enable OpenBLAS + SuiteSparse optimization" ON)
 
 if(USE_OPENBLAS_SUITESPARSE)
-    # OpenBLASの検出
+    # OpenBLASの検出（強化版）
     find_package(OpenBLAS QUIET)
     if(NOT OpenBLAS_FOUND)
+        # 複数のOpenBLASライブラリ名を試行
         find_library(OPENBLAS_LIB openblas)
+        if(NOT OPENBLAS_LIB)
+            find_library(OPENBLAS_LIB openblas64)
+        endif()
+        if(NOT OPENBLAS_LIB)
+            find_library(OPENBLAS_LIB libopenblas)
+        endif()
+        if(NOT OPENBLAS_LIB)
+            find_library(OPENBLAS_LIB libopenblas64)
+        endif()
+        
         if(OPENBLAS_LIB)
             set(OpenBLAS_LIBRARIES ${OPENBLAS_LIB})
             set(OpenBLAS_FOUND TRUE)
@@ -268,12 +279,48 @@ target_link_libraries(_rk4_sparse_cpp PRIVATE Eigen3::Eigen)
 
 # OpenBLAS + SuiteSparseライブラリをリンク
 if(USE_OPENBLAS_SUITESPARSE AND (OpenBLAS_FOUND OR OPENBLAS_LIB) AND (SuiteSparse_FOUND OR (SUITESPARSE_CHOLMOD AND SUITESPARSE_UMFPACK)))
+    add_definitions(-DOPENBLAS_SUITESPARSE_AVAILABLE)
+    message(STATUS "OpenBLAS + SuiteSparse optimization enabled")
+    
     # ライブラリリストを構築
     set(LINK_LIBRARIES)
     if(OpenBLAS_LIBRARIES)
         list(APPEND LINK_LIBRARIES ${OpenBLAS_LIBRARIES})
     elseif(OPENBLAS_LIB)
         list(APPEND LINK_LIBRARIES ${OPENBLAS_LIB})
+    endif()
+    
+    # 追加のBLASライブラリを明示的にリンク
+    find_library(BLAS_LIB blas)
+    if(BLAS_LIB)
+        list(APPEND LINK_LIBRARIES ${BLAS_LIB})
+        message(STATUS "BLAS library found: ${BLAS_LIB}")
+    endif()
+    
+    find_library(CBLAS_LIB cblas)
+    if(CBLAS_LIB)
+        list(APPEND LINK_LIBRARIES ${CBLAS_LIB})
+        message(STATUS "CBLAS library found: ${CBLAS_LIB}")
+    endif()
+    
+    # 複数のBLAS実装を試行
+    if(NOT BLAS_LIB)
+        find_library(BLAS_LIB openblas)
+    endif()
+    if(NOT BLAS_LIB)
+        find_library(BLAS_LIB libopenblas)
+    endif()
+    if(NOT BLAS_LIB)
+        find_library(BLAS_LIB libblas)
+    endif()
+    
+    if(BLAS_LIB)
+        list(APPEND LINK_LIBRARIES ${BLAS_LIB})
+        message(STATUS "BLAS library linked: ${BLAS_LIB}")
+    else()
+        message(WARNING "BLAS library not found, falling back to Eigen-only implementation")
+        set(USE_OPENBLAS_SUITESPARSE OFF)
+        add_definitions(-UOPENBLAS_SUITESPARSE_AVAILABLE)
     endif()
     
     if(SuiteSparse_LIBRARIES)
@@ -291,6 +338,10 @@ if(USE_OPENBLAS_SUITESPARSE AND (OpenBLAS_FOUND OR OPENBLAS_LIB) AND (SuiteSpars
     endif()
     
     target_link_libraries(_rk4_sparse_cpp PRIVATE ${LINK_LIBRARIES})
+else()
+    message(WARNING "OpenBLAS or SuiteSparse not found. Using Eigen-only implementation.")
+    set(USE_OPENBLAS_SUITESPARSE OFF)
+    add_definitions(-UOPENBLAS_SUITESPARSE_AVAILABLE)
 endif()
 
 # SuiteSparse-MKLライブラリをリンク
@@ -303,12 +354,24 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 # ---------------------------------------------------------------------------
-# 11. 最適化フラグ
+# 11. 最適化フラグ（BLAS最適化対応）
 # ---------------------------------------------------------------------------
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(_rk4_sparse_cpp PRIVATE -O3 -march=native)
+    target_compile_options(_rk4_sparse_cpp PRIVATE
+        -O3
+        -march=native
+        -mtune=native
+        -ffast-math
+        -funroll-loops
+        -fomit-frame-pointer
+        -DNDEBUG
+    )
+    
+    # リンク時最適化
+    set_property(TARGET _rk4_sparse_cpp PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 elseif(MSVC)
-    target_compile_options(_rk4_sparse_cpp PRIVATE /O2)
+    target_compile_options(_rk4_sparse_cpp PRIVATE /O2 /GL)
+    set_property(TARGET _rk4_sparse_cpp PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 # ---------------------------------------------------------------------------
