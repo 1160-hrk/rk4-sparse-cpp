@@ -50,7 +50,6 @@ inline void optimized_sparse_matrix_vector_multiply_suitesparse(
     int dim) {
     
     using cplx = std::complex<double>;
-    const int optimal_threshold = get_optimal_parallel_threshold_suitesparse();
     
     #ifdef _OPENMP
     if (dim >= 8192) {
@@ -320,10 +319,8 @@ Eigen::MatrixXcd rk4_sparse_suitesparse(
     bool return_traj,
     int stride,
     bool renorm,
-    OptimizationLevel level
-) {
-    using Clock = std::chrono::high_resolution_clock;
-    using Duration = std::chrono::duration<double>;
+    OptimizationLevel /* level */)  // 未使用パラメータをコメント化
+{
     using cplx = std::complex<double>;
 
     // メトリクスをリセット
@@ -469,22 +466,9 @@ Eigen::MatrixXcd rk4_sparse_suitesparse(
         double ey1 = Ey3[s][0], ey2 = Ey3[s][1], ey4 = Ey3[s][2];
 
         // H1 - Phase 4: 最適化された行列更新（8192次元対応）
-        #ifdef DEBUG_PERFORMANCE
-        auto update_start = Clock::now();
-        #endif
         adaptive_parallel_matrix_update_suitesparse(H.valuePtr(), H0_data.data(), mux_data.data(), muy_data.data(), ex1, ey1, nnz, dim);
-        #ifdef DEBUG_PERFORMANCE
-        auto update_end = Clock::now();
-        current_metrics.matrix_update_time += Duration(update_end - update_start).count();
-        current_metrics.matrix_updates++;
-        #endif
 
-        // RK4ステップの時間を計測
-        #ifdef DEBUG_PERFORMANCE
-        auto rk4_start = Clock::now();
-        #endif
-
-        // Phase 4: 最適化されたスパース行列-ベクトル積
+        // RK4ステップ
         optimized_sparse_matrix_vector_multiply_suitesparse(H, psi, k1, dim);
         
         buf = psi + 0.5 * dt * k1;
@@ -505,11 +489,6 @@ Eigen::MatrixXcd rk4_sparse_suitesparse(
 
         // 更新
         psi += (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
-        #ifdef DEBUG_PERFORMANCE
-        auto rk4_end = Clock::now();
-        current_metrics.rk4_step_time += Duration(rk4_end - rk4_start).count();
-        current_metrics.rk4_steps++;
-        #endif
 
         if (renorm) {
             cplx norm_complex = psi.adjoint() * psi;

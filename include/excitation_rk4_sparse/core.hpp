@@ -1,8 +1,13 @@
 #pragma once
 
-// Eigenの最適化設定
+// Eigenの最適化設定（重複定義を回避）
+#ifndef EIGEN_VECTORIZE
 #define EIGEN_VECTORIZE
+#endif
+
+#ifndef EIGEN_DONT_ALIGN_STATICALLY
 #define EIGEN_DONT_ALIGN_STATICALLY
+#endif
 
 #include <Eigen/Sparse>
 #include <vector>
@@ -138,5 +143,44 @@ Eigen::MatrixXcd rk4_sparse_suitesparse_fast(
 
 // ヘルパー関数
 std::vector<std::vector<double>> field_to_triplets(const Eigen::VectorXd& field);
+
+// Julia風の高速実装（シンプルで効率的）
+Eigen::MatrixXcd rk4_sparse_julia_style(
+    const Eigen::SparseMatrix<std::complex<double>>& H0,
+    const Eigen::SparseMatrix<std::complex<double>>& mux,
+    const Eigen::SparseMatrix<std::complex<double>>& muy,
+    const Eigen::VectorXd& Ex,
+    const Eigen::VectorXd& Ey,
+    const Eigen::Ref<const Eigen::VectorXcd>& psi0,
+    double dt,
+    bool return_traj,
+    int stride,
+    bool renorm = false);
+
+// CSR形式による超高速実装
+Eigen::MatrixXcd rk4_sparse_csr_optimized(
+    const Eigen::SparseMatrix<std::complex<double>>& H0,
+    const Eigen::SparseMatrix<std::complex<double>>& mux,
+    const Eigen::SparseMatrix<std::complex<double>>& muy,
+    const Eigen::VectorXd& Ex,
+    const Eigen::VectorXd& Ey,
+    const Eigen::Ref<const Eigen::VectorXcd>& psi0,
+    double dt,
+    bool return_traj,
+    int stride,
+    bool renorm = false);
+
+// 中規模問題特化のSIMD最適化実装 (100-1000次元に最適化)
+Eigen::MatrixXcd rk4_sparse_medium_scale_optimized(
+    const Eigen::SparseMatrix<std::complex<double>>& H0,
+    const Eigen::SparseMatrix<std::complex<double>>& mux,
+    const Eigen::SparseMatrix<std::complex<double>>& muy,
+    const Eigen::VectorXd& Ex,
+    const Eigen::VectorXd& Ey,
+    const Eigen::Ref<const Eigen::VectorXcd>& psi0,
+    double dt,
+    bool return_traj,
+    int stride,
+    bool renorm = false);
 
 } // namespace excitation_rk4_sparse

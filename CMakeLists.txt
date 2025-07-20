@@ -412,6 +412,24 @@ elseif(MSVC)
     set_property(TARGET _rk4_sparse_cpp PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
+# コンパイル最適化の設定
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # 高速化フラグ
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -ffast-math")
+    
+    # SIMD/ベクトル化最適化
+    add_compile_definitions(EIGEN_VECTORIZE)
+    add_compile_definitions(EIGEN_DONT_ALIGN_STATICALLY)
+    
+    # OpenMP最適化
+    if(OpenMP_CXX_FOUND)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+    endif()
+    
+    # 警告レベル調整
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+endif()
+
 # ---------------------------------------------------------------------------
 # 12. インストール設定
 # ---------------------------------------------------------------------------
@@ -449,5 +467,13 @@ if(USE_SUITESPARSE_MKL)
 endif()
 message(STATUS "Source files: ${SOURCES}")
 message(STATUS "Include directories: ${CMAKE_CURRENT_SOURCE_DIR}/include; ${CMAKE_CURRENT_BINARY_DIR}/generated")
+
+# ---------------------------------------------------------------------------
+# Examples (Optional)
+# ---------------------------------------------------------------------------
+option(BUILD_EXAMPLES "Build example programs" ON)
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
 
 # =============================  end of file  ===============================
