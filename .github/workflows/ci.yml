@@ -12,13 +12,13 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.8, 3.9, "3.10", "3.11"]
+        python-version: [3.9, "3.10", "3.11", "3.12"]
         exclude:
           # Reduce matrix size for faster builds
           - os: macos-latest
-            python-version: 3.8
+            python-version: 3.9
           - os: windows-latest
-            python-version: 3.8
+            python-version: 3.9
 
     steps:
     - uses: actions/checkout@v3
@@ -57,9 +57,21 @@ jobs:
         python -m pip install pybind11[global]
         python setup.py build_ext --inplace
 
-    - name: Run tests
+    - name: Run Python tests
       run: |
-        pytest tests/ -v --cov=excitation_rk4_sparse --cov-report=xml
+        # 基本的なpytestテスト
+        pytest tests/ -v --cov=rk4_sparse --cov-report=xml
+
+    - name: Run C++ tests (if available)
+      run: |
+        if [ -d "tests/cpp" ] && [ "$(ls -A tests/cpp)" ]; then
+          cd tests/cpp
+          cmake .
+          make
+          ./test_sparse_matrix_operations
+        else
+          echo "No C++ tests found, skipping"
+        fi
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -91,7 +103,7 @@ jobs:
       run: flake8 python/ tests/ examples/
 
     - name: Run mypy
-      run: mypy python/excitation_rk4_sparse/
+      run: mypy python/rk4_sparse/
 
   docs:
     runs-on: ubuntu-latest
