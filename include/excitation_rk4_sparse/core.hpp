@@ -183,4 +183,40 @@ Eigen::MatrixXcd rk4_sparse_medium_scale_optimized(
     int stride,
     bool renorm = false);
 
+// ユーティリティ関数
+std::vector<std::vector<double>> field_to_triplets(const Eigen::VectorXd& field);
+
+// Julia Killer SIMD実装
+Eigen::MatrixXcd julia_killer_rk4_phase1(
+    const Eigen::SparseMatrix<std::complex<double>>& H0,
+    const Eigen::SparseMatrix<std::complex<double>>& mux,
+    const Eigen::SparseMatrix<std::complex<double>>& muy,
+    const Eigen::VectorXd& Ex,
+    const Eigen::VectorXd& Ey,
+    const Eigen::Ref<const Eigen::VectorXcd>& psi0,
+    double dt,
+    bool return_traj = true,
+    int stride = 1,
+    bool renorm = false);
+
+// Julia Killer補助関数
+void julia_killer_sparse_matvec(
+    const std::complex<double>* H_values,
+    const int* H_indices,
+    const int* H_indptr,
+    const std::complex<double>* x,
+    std::complex<double>* y,
+    int dim);
+
+void julia_killer_vector_add_scaled(
+    std::complex<double>* result,
+    const std::complex<double>* a,
+    const std::complex<double>* b,
+    double scale,
+    int dim);
+
+void julia_killer_vector_normalize(
+    std::complex<double>* vec,
+    int dim);
+
 } // namespace excitation_rk4_sparse

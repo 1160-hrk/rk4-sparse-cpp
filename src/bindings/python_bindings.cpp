@@ -692,6 +692,66 @@ PYBIND11_MODULE(_rk4_sparse_cpp, m) {
     "100-1000次元の中規模問題に特化したSIMD最適化RK4実装"
     );
 
+    // Julia Killer Phase 1: SIMD最適化実装
+    m.def("julia_killer_rk4_phase1", [](
+        const py::object& H0,
+        const py::object& mux,
+        const py::object& muy,
+        const py::array_t<double>& Ex,
+        const py::array_t<double>& Ey,
+        const py::array_t<cplx>& psi0,
+        double dt,
+        bool return_traj = true,
+        int stride = 1,
+        bool renorm = false
+    ) {
+        detail::ensure_positive(dt, "dt");
+        detail::ensure_positive(stride, "stride");
+
+        // バッファ情報取得
+        py::buffer_info Ex_buf = Ex.request();
+        py::buffer_info Ey_buf = Ey.request();
+        py::buffer_info psi0_buf = psi0.request();
+
+        detail::ensure_vector_1d(Ex_buf, "Ex");
+        detail::ensure_vector_1d(Ey_buf, "Ey");
+        detail::ensure_vector_1d(psi0_buf, "psi0");
+
+        // サイズ一致チェック
+        if (Ex_buf.shape[0] != Ey_buf.shape[0]) {
+            throw py::value_error("Ex and Ey must have the same length");
+        }
+
+        // スパース行列の構築
+        Eigen::SparseMatrix<cplx> H0_mat = build_sparse_matrix_from_scipy(H0);
+        Eigen::SparseMatrix<cplx> mux_mat = build_sparse_matrix_from_scipy(mux);
+        Eigen::SparseMatrix<cplx> muy_mat = build_sparse_matrix_from_scipy(muy);
+
+        // 電場とpsi0の変換
+        Eigen::Map<const Eigen::VectorXd> Ex_vec(static_cast<double*>(Ex_buf.ptr), Ex_buf.shape[0]);
+        Eigen::Map<const Eigen::VectorXd> Ey_vec(static_cast<double*>(Ey_buf.ptr), Ey_buf.shape[0]);
+        Eigen::Map<const Eigen::VectorXcd> psi0_vec(static_cast<cplx*>(psi0_buf.ptr), psi0_buf.shape[0]);
+
+        // Julia Killer SIMD最適化実装を呼び出し
+        return julia_killer_rk4_phase1(
+            H0_mat, mux_mat, muy_mat,
+            Ex_vec, Ey_vec, psi0_vec,
+            dt, return_traj, stride, renorm
+        );
+    },
+    py::arg("H0"),
+    py::arg("mux"), 
+    py::arg("muy"),
+    py::arg("Ex"),
+    py::arg("Ey"),
+    py::arg("psi0"),
+    py::arg("dt"),
+    py::arg("return_traj") = true,
+    py::arg("stride") = 1,
+    py::arg("renorm") = false,
+    "Julia Killer Phase 1: JuliaのSIMD実装を上回るAVX512/AVX2最適化RK4実装"
+    );
+
     // 簡単なテスト関数を追加（デバッグ用）
     m.def("test_basic_sparse_multiply", [](
         const py::object& H0,

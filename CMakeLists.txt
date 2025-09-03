@@ -269,6 +269,7 @@ configure_file(
 set(SOURCES
     src/core/excitation_rk4_sparse.cpp
     src/core/excitation_rk4_benchmark.cpp
+    src/core/julia_killer_rk4.cpp
     src/bindings/python_bindings.cpp
 )
 
