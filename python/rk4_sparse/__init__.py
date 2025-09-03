@@ -11,7 +11,7 @@ rk4_sparse ― sparse 行列版 RK4 伝搬器
 * ``create_test_*``           : テスト用ユーティリティ
 """
 
-# from __future__ import annotations
+from __future__ import annotations
 
 from .rk4_py import rk4_sparse_py, rk4_numba_py
 from .utils import create_test_matrices, create_test_pulse
