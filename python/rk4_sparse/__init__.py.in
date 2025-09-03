@@ -1,4 +1,78 @@
 # __init__.py.in
-__all__ = ["_rk4_sparse_cpp"]
 __version__ = "@PROJECT_VERSION@"
-from ._rk4_sparse_cpp import *  # noqa: F401,F403
+
+# __all__ = ["_rk4_sparse_cpp"]
+# from ._rk4_sparse_cpp import *  # noqa: F401,F403
+
+
+from __future__ import annotations
+
+from .rk4_py import rk4_sparse_py, rk4_numba_py
+from .utils import create_test_matrices, create_test_pulse
+
+# ──────────────────────────────────────────────────────────────
+# C++ バックエンドは wheel に含まれていない可能性もあるので
+# ImportError を握りつぶして None をエクスポートする。
+# ──────────────────────────────────────────────────────────────
+
+# Eigen実装
+try:
+    from ._rk4_sparse_cpp import rk4_sparse_eigen  # バイナリ拡張を直接 import
+    print("Info: Eigen version available")
+except ImportError as e:                              # ビルド無しでもパッケージは使える
+    rk4_sparse_eigen = None                        # type: ignore[assignment]
+    print(f"Warning: Eigen version not available: {e}")
+
+# キャッシュ化された高速Eigen実装
+try:
+    from ._rk4_sparse_cpp import rk4_sparse_eigen_cached
+    print("Info: Cached Eigen version available")
+except ImportError as e:
+    rk4_sparse_eigen_cached = None
+    print(f"Warning: Cached Eigen version not available: {e}")
+
+# 最適化されたEigen実装（直接CSR形式）
+try:
+    from ._rk4_sparse_cpp import rk4_sparse_eigen_direct_csr
+    print("Info: Optimized Eigen version (direct CSR) available")
+except ImportError as e:
+    rk4_sparse_eigen_direct_csr = None
+    print(f"Warning: Optimized Eigen version not available: {e}")
+
+# OpenBLAS + SuiteSparse実装
+try:
+    from ._rk4_sparse_cpp import (
+        rk4_sparse_suitesparse,
+        benchmark_implementations
+    )
+    OPENBLAS_SUITESPARSE_AVAILABLE = True
+    print("Info: OpenBLAS + SuiteSparse version available")
+except ImportError as e:
+    rk4_sparse_suitesparse = None
+    benchmark_implementations = None
+    OPENBLAS_SUITESPARSE_AVAILABLE = False
+    print(f"Warning: OpenBLAS + SuiteSparse version not available: {e}")
+
+# SuiteSparse-MKL実装（x86_64のみ）
+try:
+    from ._rk4_sparse_cpp import rk4_sparse_suitesparse_mkl
+    SUITESPARSE_MKL_AVAILABLE = True
+    print("Info: SuiteSparse-MKL version available")
+except ImportError as e:
+    rk4_sparse_suitesparse_mkl = None
+    SUITESPARSE_MKL_AVAILABLE = False
+    print(f"Warning: SuiteSparse-MKL version not available: {e}")
+
+__all__ = [
+    "rk4_sparse_py",
+    "rk4_numba_py",
+    "rk4_sparse_eigen",
+    "rk4_sparse_eigen_cached",
+    "rk4_sparse_eigen_direct_csr",
+    "rk4_sparse_suitesparse",
+    "benchmark_implementations",
+    "create_test_matrices",
+    "create_test_pulse",
+    "OPENBLAS_SUITESPARSE_AVAILABLE",
+    "SUITESPARSE_MKL_AVAILABLE",
+]
