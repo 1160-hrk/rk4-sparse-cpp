@@ -1,9 +1,5 @@
 # __init__.py.in
 
-# __all__ = ["_rk4_sparse_cpp"]
-# from ._rk4_sparse_cpp import *  # noqa: F401,F403
-
-
 from __future__ import annotations
 __version__ = "@PROJECT_VERSION@"
 
