@@ -7,13 +7,15 @@ The functions have argument names and brief docstrings from pybind11.
 from __future__ import annotations
 
 try:
-    from ._rk4_sparse_cpp import *  # type: ignore
-    from ._rk4_sparse_cpp import __doc__ as __doc__  # re-export module doc
+    from . import _rk4_sparse_cpp as _ext  # type: ignore
 except Exception as _e:  # pragma: no cover
     raise ImportError(
         "C++ extension is not available. Build the module to use rk4_sparse.fast."
     ) from _e
 
-# Avoid leaking names beyond the C++ exports
-__all__ = [name for name in globals().keys() if not name.startswith("_")]
-
+# Re-export the C++ module's public API without star-imports (flake8 clean)
+__doc__ = _ext.__doc__
+__all__ = [name for name in dir(_ext) if not name.startswith("_")]
+for name in __all__:
+    globals()[name] = getattr(_ext, name)
+del name, _ext

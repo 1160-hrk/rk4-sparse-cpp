@@ -41,7 +41,13 @@ jobs:
     - name: Install system dependencies (macOS)
       if: matrix.os == 'macos-latest'
       run: |
-        brew install cmake eigen
+        brew update
+        # GitHub macOS runners already include CMake; avoid reinstall conflicts.
+        if ! brew list --versions eigen >/dev/null; then
+          brew install eigen
+        else
+          echo "eigen already installed"
+        fi
 
     - name: Install system dependencies (Windows)
       if: matrix.os == 'windows-latest'
