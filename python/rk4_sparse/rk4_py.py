@@ -24,7 +24,7 @@ except ImportError:
             # Used as @njit without args
             return dargs[0]
         # Used as @njit(...), return decorator that returns function unchanged
-        def _wrap(func:Any) -> Any:
+        def _wrap(func: Any) -> Any:
             return func
         return _wrap
 
