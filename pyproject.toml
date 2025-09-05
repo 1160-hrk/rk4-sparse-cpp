@@ -80,8 +80,8 @@ Issues = "https://github.com/1160-hrk/rk4-sparse-cpp/issues"
 # 2. setuptools-scm – Git タグ vX.Y.Z →  X.Y.Z
 # ---------------------------------------------------------------------------
 [tool.setuptools_scm]
-# tag_regex = "^v(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
-tag_regex = '^v(?P<version>\d+\.\d+\.\d+)(?:-[A-Za-z0-9._-]+)?$'
+# Accept tags like v1.2.3 and v1.2.3.dev (PEP 440: dev must be numeric if present)
+tag_regex = '^(?P<prefix>v)?(?P<version>\d+\.\d+\.\d+)(?:\.dev\d*)?$'
 # version_scheme = "post-release"
 local_scheme   = "no-local-version"
 
