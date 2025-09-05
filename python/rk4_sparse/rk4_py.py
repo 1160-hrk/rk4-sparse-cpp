@@ -18,7 +18,15 @@ from scipy.sparse import csr_matrix
 try:
     from numba import njit
 except ImportError:
-    njit = lambda func: func
+    # Fallback no-op decorator compatible with @njit(...) usage
+    def njit(*dargs, **dkwargs):  # type: ignore
+        if dargs and callable(dargs[0]) and len(dargs) == 1 and not dkwargs:
+            # Used as @njit without args
+            return dargs[0]
+        # Used as @njit(...), return decorator that returns function unchanged
+        def _wrap(func):
+            return func
+        return _wrap
 
 
 
