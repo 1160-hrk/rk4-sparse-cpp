@@ -155,7 +155,7 @@ def benchmark_implementations(
     return_traj: bool = False,
     stride: int = 1,
     renorm: bool = False,
-)-> Any:
+) -> Any:
     """Run C++-side benchmark harness across implementations.
 
     Returns backend-defined performance metrics object or ndarray depending on build.
