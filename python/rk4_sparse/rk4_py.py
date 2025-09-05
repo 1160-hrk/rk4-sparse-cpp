@@ -76,6 +76,7 @@ def rk4_sparse_py(
         muy = csr_matrix(muy)
 
     steps = (Ex.size - 1) // 2
+
     def _field_to_triplets(field: np.ndarray) -> np.ndarray:
         """
         奇数長 → そのまま
