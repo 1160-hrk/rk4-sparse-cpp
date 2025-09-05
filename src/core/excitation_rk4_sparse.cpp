@@ -80,7 +80,7 @@ inline void adaptive_parallel_matrix_update(
     #ifdef _OPENMP
     if (dim >= 8192) {
         // 8192次元以上：並列化を完全に無効化（シリアル実行）
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (dim >= 4096) {
@@ -88,12 +88,12 @@ inline void adaptive_parallel_matrix_update(
         if (nnz > optimal_threshold * 256) {
             const int chunk_size = std::max(2048, static_cast<int>(nnz) / (omp_get_max_threads() * 256));
             #pragma omp parallel for schedule(dynamic, chunk_size)
-            for (size_t i = 0; i < nnz; ++i) {
+            for (int i = 0; i < static_cast<int>(nnz); ++i) {
                 H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
             }
         } else {
             // シリアル実行
-            for (size_t i = 0; i < nnz; ++i) {
+            for (int i = 0; i < static_cast<int>(nnz); ++i) {
                 H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
             }
         }
@@ -101,52 +101,52 @@ inline void adaptive_parallel_matrix_update(
         // 極大規模問題：動的スケジューリング
         const int chunk_size = std::max(2048, static_cast<int>(nnz) / (omp_get_max_threads() * 256));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 128) {
         // 超大規模問題：動的スケジューリング
         const int chunk_size = std::max(1024, static_cast<int>(nnz) / (omp_get_max_threads() * 128));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 64) {
         // 大規模問題：動的スケジューリング
         const int chunk_size = std::max(512, static_cast<int>(nnz) / (omp_get_max_threads() * 64));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 32) {
         // 中大規模問題：ガイド付きスケジューリング
         #pragma omp parallel for schedule(guided)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 16) {
         // 中規模問題：静的スケジューリング
         #pragma omp parallel for schedule(static)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 8) {
         // 小中規模問題：小さなチャンクサイズでの静的スケジューリング
         const int chunk_size = std::max(1, static_cast<int>(nnz) / (omp_get_max_threads() * 8));
         #pragma omp parallel for schedule(static, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else {
         // 小規模問題：シリアル実行（並列化オーバーヘッドを回避）
         // 1024次元以下では実質的にシリアル実行
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     }
     #else
     // OpenMPが利用できない場合のシリアル実行
-    for (size_t i = 0; i < nnz; ++i) {
+    for (int i = 0; i < static_cast<int>(nnz); ++i) {
         H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
     }
     #endif
@@ -167,52 +167,52 @@ inline void optimized_parallel_matrix_update(
         // 極大規模問題：動的スケジューリング（負荷分散最適化）
         const int chunk_size = std::max(2048, static_cast<int>(nnz) / (omp_get_max_threads() * 256));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 128) {
         // 超大規模問題：動的スケジューリング（負荷分散最適化）
         const int chunk_size = std::max(1024, static_cast<int>(nnz) / (omp_get_max_threads() * 128));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 64) {
         // 大規模問題：動的スケジューリング（負荷分散最適化）
         const int chunk_size = std::max(512, static_cast<int>(nnz) / (omp_get_max_threads() * 64));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 32) {
         // 中大規模問題：ガイド付きスケジューリング（適応的負荷分散）
         #pragma omp parallel for schedule(guided)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 16) {
         // 中規模問題：静的スケジューリング（低オーバーヘッド）
         #pragma omp parallel for schedule(static)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else if (nnz > optimal_threshold * 8) {
         // 小中規模問題：小さなチャンクサイズでの静的スケジューリング
         const int chunk_size = std::max(1, static_cast<int>(nnz) / (omp_get_max_threads() * 8));
         #pragma omp parallel for schedule(static, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     } else {
         // 小規模問題：シリアル実行（並列化オーバーヘッドを回避）
         // 1024次元以下では実質的にシリアル実行
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
     }
     #else
     // OpenMPが利用できない場合のシリアル実行
-    for (size_t i = 0; i < nnz; ++i) {
+    for (int i = 0; i < static_cast<int>(nnz); ++i) {
         H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
     }
     #endif
@@ -246,52 +246,52 @@ inline std::vector<std::complex<double>> optimized_expand_to_pattern(
         // 極大規模データ：動的スケジューリング
         const int chunk_size = std::max(1024, static_cast<int>(nnz) / (omp_get_max_threads() * 128));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             result[i] = mat.coeff(pi[i], pj[i]);
         }
     } else if (nnz > optimal_threshold * 64) {
         // 超大規模データ：動的スケジューリング
         const int chunk_size = std::max(512, static_cast<int>(nnz) / (omp_get_max_threads() * 64));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             result[i] = mat.coeff(pi[i], pj[i]);
         }
     } else if (nnz > optimal_threshold * 32) {
         // 大規模データ：動的スケジューリング
         const int chunk_size = std::max(256, static_cast<int>(nnz) / (omp_get_max_threads() * 32));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             result[i] = mat.coeff(pi[i], pj[i]);
         }
     } else if (nnz > optimal_threshold * 16) {
         // 中大規模データ：動的スケジューリング
         const int chunk_size = std::max(128, static_cast<int>(nnz) / (omp_get_max_threads() * 16));
         #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             result[i] = mat.coeff(pi[i], pj[i]);
         }
     } else if (nnz > optimal_threshold * 8) {
         // 中規模データ：静的スケジューリング
         #pragma omp parallel for schedule(static)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             result[i] = mat.coeff(pi[i], pj[i]);
         }
     } else if (nnz > optimal_threshold * 4) {
         // 小中規模データ：小さなチャンクサイズでの静的スケジューリング
         const int chunk_size = std::max(1, static_cast<int>(nnz) / (omp_get_max_threads() * 8));
         #pragma omp parallel for schedule(static, chunk_size)
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             result[i] = mat.coeff(pi[i], pj[i]);
         }
     } else {
         // 小規模データ：シリアル実行（並列化オーバーヘッドを回避）
         // 1024次元以下では実質的にシリアル実行
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             result[i] = mat.coeff(pi[i], pj[i]);
         }
     }
     #else
-    for (size_t i = 0; i < nnz; ++i) {
+    for (int i = 0; i < static_cast<int>(nnz); ++i) {
         result[i] = mat.coeff(pi[i], pj[i]);
     }
     #endif
@@ -363,7 +363,7 @@ Eigen::MatrixXcd rk4_sparse_blas_optimized_efficient(
         #ifdef _OPENMP
         if (dim >= 8192) {
             // 8192次元以上：並列化を完全に無効化（シリアル実行）
-            for (size_t i = 0; i < nnz; ++i) {
+            for (int i = 0; i < static_cast<int>(nnz); ++i) {
                 H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
             }
         } else if (dim >= 4096) {
@@ -372,12 +372,12 @@ Eigen::MatrixXcd rk4_sparse_blas_optimized_efficient(
             if (nnz > optimal_threshold * 256) {
                 const int chunk_size = std::max(2048, static_cast<int>(nnz) / (omp_get_max_threads() * 256));
                 #pragma omp parallel for schedule(dynamic, chunk_size)
-                for (size_t i = 0; i < nnz; ++i) {
+                for (int i = 0; i < static_cast<int>(nnz); ++i) {
                     H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
                 }
             } else {
                 // シリアル実行
-                for (size_t i = 0; i < nnz; ++i) {
+                for (int i = 0; i < static_cast<int>(nnz); ++i) {
                     H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
                 }
             }
@@ -387,7 +387,7 @@ Eigen::MatrixXcd rk4_sparse_blas_optimized_efficient(
         }
         #else
         // OpenMPが利用できない場合のシリアル実行
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex * mux_data[i] - ey * muy_data[i];
         }
         #endif
@@ -993,7 +993,7 @@ Eigen::MatrixXcd rk4_sparse_blas_optimized_safe(
         double ey1 = Ey3[s][0], ey2 = Ey3[s][1], ey4 = Ey3[s][2];
         
         // H1 - k1の計算用
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex1 * mux_data[i] - ey1 * muy_data[i];
         }
         
@@ -1002,7 +1002,7 @@ Eigen::MatrixXcd rk4_sparse_blas_optimized_safe(
         buf = psi + 0.5 * dt * k1;
         
         // H2 - k2の計算用
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex2 * mux_data[i] - ey2 * muy_data[i];
         }
         
@@ -1011,7 +1011,7 @@ Eigen::MatrixXcd rk4_sparse_blas_optimized_safe(
         buf = psi + 0.5 * dt * k2;
         
         // H3 - k3の計算用（ex2, ey2を使用）
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex2 * mux_data[i] - ey2 * muy_data[i];
         }
         
@@ -1020,7 +1020,7 @@ Eigen::MatrixXcd rk4_sparse_blas_optimized_safe(
         buf = psi + dt * k3;
         
         // H4 - k4の計算用
-        for (size_t i = 0; i < nnz; ++i) {
+        for (int i = 0; i < static_cast<int>(nnz); ++i) {
             H_values[i] = H0_data[i] - ex4 * mux_data[i] - ey4 * muy_data[i];
         }
         
