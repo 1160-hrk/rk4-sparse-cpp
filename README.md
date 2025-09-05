@@ -1,5 +1,7 @@
 # Excitation RK4 Sparse
 
+[![CI](https://github.com/1160-hrk/rk4-sparse-cpp/workflows/CI/badge.svg)](https://github.com/1160-hrk/rk4-sparse-cpp/actions) [![PyPI version](https://badge.fury.io/py/rk4-sparse-cpp.svg)](https://badge.fury.io/py/rk4-sparse-cpp) [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
+
 量子力学的な励起ダイナミクスを計算するための疎行列ベースのRK4ソルバー。
 
 ## 機能
