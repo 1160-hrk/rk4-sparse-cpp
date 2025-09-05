@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, Any
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -19,12 +19,12 @@ try:
     from numba import njit
 except ImportError:
     # Fallback no-op decorator compatible with @njit(...) usage
-    def njit(*dargs, **dkwargs):  # type: ignore
+    def njit(*dargs, **dkwargs) -> Any:
         if dargs and callable(dargs[0]) and len(dargs) == 1 and not dkwargs:
             # Used as @njit without args
             return dargs[0]
         # Used as @njit(...), return decorator that returns function unchanged
-        def _wrap(func):
+        def _wrap(func:Any) -> Any:
             return func
         return _wrap
 

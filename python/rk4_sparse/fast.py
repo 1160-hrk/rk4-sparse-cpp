@@ -7,7 +7,7 @@ The functions have argument names and brief docstrings from pybind11.
 from __future__ import annotations
 
 try:
-    from . import _rk4_sparse_cpp as _ext  # type: ignore
+    from . import _rk4_sparse_cpp as _ext
 except Exception as _e:  # pragma: no cover
     raise ImportError(
         "C++ extension is not available. Build the module to use rk4_sparse.fast."
