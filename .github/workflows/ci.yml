@@ -71,6 +71,7 @@ jobs:
         pytest tests/ -v -k "not test_rk4" --cov=rk4_sparse --cov-report=xml
 
     - name: Upload coverage to Codecov
+      if: false  # 一時的に無効化 - Codecovレート制限のため
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
