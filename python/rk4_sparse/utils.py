@@ -1,9 +1,13 @@
 """テスト用のユーティリティ関数を提供するモジュール"""
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy import sparse
 
-def create_test_matrices(n: int):
+from typing import Tuple
+
+
+def create_test_matrices(n: int) -> Tuple[sparse.csr_matrix, sparse.csr_matrix, sparse.csr_matrix]:
     """テスト用の行列を生成
 
     Args:
@@ -29,7 +33,7 @@ def create_test_matrices(n: int):
 
     return H0, mux, muy
 
-def create_test_pulse(steps: int):
+def create_test_pulse(steps: int) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
     """テスト用のパルス波形を生成
 
     Args:

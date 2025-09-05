@@ -13,6 +13,8 @@ rk4_sparse ― sparse 行列版 RK4 伝搬器
 
 from __future__ import annotations
 
+from typing import Any, Optional
+
 from .rk4_py import rk4_sparse_py, rk4_numba_py
 from .utils import create_test_matrices, create_test_pulse
 
@@ -21,12 +23,21 @@ from .utils import create_test_matrices, create_test_pulse
 # ImportError を握りつぶして None をエクスポートする。
 # ──────────────────────────────────────────────────────────────
 
+rk4_sparse_eigen: Optional[Any] = None
+rk4_sparse_eigen_cached: Optional[Any] = None
+rk4_sparse_eigen_direct_csr: Optional[Any] = None
+rk4_sparse_suitesparse: Optional[Any] = None
+benchmark_implementations: Optional[Any] = None
+rk4_sparse_suitesparse_mkl: Optional[Any] = None
+OPENBLAS_SUITESPARSE_AVAILABLE: bool = False
+SUITESPARSE_MKL_AVAILABLE: bool = False
+
 # Eigen実装
 try:
     from ._rk4_sparse_cpp import rk4_sparse_eigen  # バイナリ拡張を直接 import
     print("Info: Eigen version available")
 except ImportError as e:                              # ビルド無しでもパッケージは使える
-    rk4_sparse_eigen = None                        # type: ignore[assignment]
+    rk4_sparse_eigen = None
     print(f"Warning: Eigen version not available: {e}")
 
 # キャッシュ化された高速Eigen実装

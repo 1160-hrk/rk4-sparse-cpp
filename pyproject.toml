@@ -163,3 +163,21 @@ module = [
     "numpy.*",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "numba.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "rk4_sparse._rk4_sparse_cpp",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "rk4_sparse.rk4_py",
+]
+disable_error_code = ["no-any-return", "misc"]

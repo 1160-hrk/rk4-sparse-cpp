@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 
 try:
     # C++ extension (may not be available in pure-Python envs)
-    from . import _rk4_sparse_cpp as _c  # type: ignore
+    from . import _rk4_sparse_cpp as _c
 except Exception:  # pragma: no cover - keep import-time failure non-fatal
     _c = None  # type: ignore
 
 try:
-    from scipy.sparse import csr_matrix  # type: ignore
+    from scipy.sparse import csr_matrix
 except Exception:  # pragma: no cover
     csr_matrix = object  # type: ignore
 
@@ -153,7 +155,7 @@ def benchmark_implementations(
     return_traj: bool = False,
     stride: int = 1,
     renorm: bool = False,
-):
+)-> Any:
     """Run C++-side benchmark harness across implementations.
 
     Returns backend-defined performance metrics object or ndarray depending on build.
@@ -167,7 +169,7 @@ def get_omp_max_threads() -> int:
     """Get the maximum number of OpenMP threads configured for the C++ backend."""
     if _c is None or not hasattr(_c, "get_omp_max_threads"):
         return 1
-    return _c.get_omp_max_threads()
+    return int(_c.get_omp_max_threads())
 
 
 __all__ = [
@@ -178,4 +180,3 @@ __all__ = [
     "benchmark_implementations",
     "get_omp_max_threads",
 ]
-
