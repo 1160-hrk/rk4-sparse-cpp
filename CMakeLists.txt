@@ -119,10 +119,18 @@ find_package(Eigen3 3.3 QUIET NO_MODULE)
 if(NOT Eigen3_FOUND)
     message(STATUS "Eigen3 not found, using bundled copy")
     set(EIGEN3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen")
+    
+    # 同梱Eigenの存在確認
+    if(NOT EXISTS "${EIGEN3_INCLUDE_DIR}/Eigen/Core")
+        message(FATAL_ERROR "Bundled Eigen not found at ${EIGEN3_INCLUDE_DIR}")
+    endif()
 
     add_library(_eigen_interface INTERFACE)
     target_include_directories(_eigen_interface INTERFACE ${EIGEN3_INCLUDE_DIR})
     add_library(Eigen3::Eigen ALIAS _eigen_interface)
+    message(STATUS "Using bundled Eigen from: ${EIGEN3_INCLUDE_DIR}")
+else()
+    message(STATUS "Using system Eigen3: ${EIGEN3_INCLUDE_DIR}")
 endif()
 
 # ---------------------------------------------------------------------------
