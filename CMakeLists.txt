@@ -424,6 +424,15 @@ install(
     DESTINATION rk4_sparse
 )
 
+# Install additional pure-Python modules (api.py, fast.py, etc.) under rk4_sparse
+install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/rk4_sparse/
+    DESTINATION rk4_sparse
+    FILES_MATCHING
+        PATTERN "*.py"
+        PATTERN "__init__.py" EXCLUDE
+)
+
 # ---------------------------------------------------------------------------
 # 13. ビルドログ
 # ---------------------------------------------------------------------------
