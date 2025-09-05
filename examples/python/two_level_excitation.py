@@ -2,7 +2,8 @@ import sys
 import os
 
 # プロジェクトルートへのパスを追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..',
+                                'python'))
 
 savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
 os.makedirs(savepath, exist_ok=True)
@@ -39,7 +40,7 @@ psi0 = np.array([1, 0], dtype=np.complex128)  # 形状を修正
 
 # 正弦波の電場を生成
 t = np.arange(0, dt_E * (steps_E+2), dt_E)
-Ex = E0 * np.sin(omega_L * t) 
+Ex = E0 * np.sin(omega_L * t)
 Ey = np.zeros_like(Ex)
 
 # 入力型の確認
@@ -144,8 +145,10 @@ plt.figure(figsize=(15, 10))
 plt.subplot(2, 2, 1)
 plt.plot(t_analytical, P0_py, 'b-', label='Ground state (Python)', alpha=0.7)
 plt.plot(t_analytical, P1_py, 'r-', label='Excited state (Python)', alpha=0.7)
-plt.plot(t_analytical, P0_analytical, 'b--', label='Ground state (analytical)', alpha=0.7)
-plt.plot(t_analytical, P1_analytical, 'r--', label='Excited state (analytical)', alpha=0.7)
+plt.plot(t_analytical, P0_analytical, 'b--',
+         label='Ground state (analytical)', alpha=0.7)
+plt.plot(t_analytical, P1_analytical, 'r--',
+         label='Excited state (analytical)', alpha=0.7)
 plt.xlabel('Time (a.u.)')
 plt.ylabel('Population')
 plt.title('Python Implementation vs Analytical')
@@ -156,8 +159,10 @@ plt.legend()
 plt.subplot(2, 2, 2)
 plt.plot(t_analytical, P0_cpp, 'b-', label='Ground state (C++)', alpha=0.7)
 plt.plot(t_analytical, P1_cpp, 'r-', label='Excited state (C++)', alpha=0.7)
-plt.plot(t_analytical, P0_analytical, 'b--', label='Ground state (analytical)', alpha=0.7)
-plt.plot(t_analytical, P1_analytical, 'r--', label='Excited state (analytical)', alpha=0.7)
+plt.plot(t_analytical, P0_analytical, 'b--',
+         label='Ground state (analytical)', alpha=0.7)
+plt.plot(t_analytical, P1_analytical, 'r--',
+         label='Excited state (analytical)', alpha=0.7)
 plt.xlabel('Time (a.u.)')
 plt.ylabel('Population')
 plt.title('C++ Implementation vs Analytical')
@@ -166,8 +171,10 @@ plt.legend()
 
 # サブプロット3: Python実装とC++実装の差
 plt.subplot(2, 2, 3)
-plt.plot(t_analytical, np.abs(P0_py - P0_cpp), 'b-', label='Ground state difference', alpha=0.7)
-plt.plot(t_analytical, np.abs(P1_py - P1_cpp), 'r-', label='Excited state difference', alpha=0.7)
+plt.plot(t_analytical, np.abs(P0_py - P0_cpp), 'b-',
+         label='Ground state difference', alpha=0.7)
+plt.plot(t_analytical, np.abs(P1_py - P1_cpp), 'r-',
+         label='Excited state difference', alpha=0.7)
 plt.xlabel('Time (a.u.)')
 plt.ylabel('|Population difference|')
 plt.title('Difference between Python and C++ implementations')
@@ -229,4 +236,5 @@ print("\nC++ vs Analytical:")
 print(f"Ground state: {max_diff_analytical['cpp']['ground']:.6e}")
 print(f"Excited state: {max_diff_analytical['cpp']['excited']:.6e}")
 
-print("\nPlot saved as {}".format(os.path.join(savepath, 'two_level_excitation_comparison.png'))) 
+print("\nPlot saved as "
+      f"{os.path.join(savepath, 'two_level_excitation_comparison.png')}")
