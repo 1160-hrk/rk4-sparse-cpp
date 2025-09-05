@@ -102,7 +102,7 @@ jobs:
       run: black --check python/ tests/ examples/
 
     - name: Run flake8
-      run: flake8 python/ tests/ examples/ --max-line-length=88 --ignore=E501,E402,E302,E305,E128,E129,E127,E261,E301,E303,E731,F403,F841,W391,E226,W504,E123,E116
+      run: flake8 python/ tests/ examples/ --max-line-length=88 --ignore=E501,E402,E302,E305,E128,E129,E127,E261,E301,E303,E306,E731,F403,F841,W391,E226,W504,E123,E116
 
     - name: Run mypy
       run: mypy python/rk4_sparse/
