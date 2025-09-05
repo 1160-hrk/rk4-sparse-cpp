@@ -9,12 +9,12 @@ try:
     # C++ extension (may not be available in pure-Python envs)
     from . import _rk4_sparse_cpp as _c
 except Exception:  # pragma: no cover - keep import-time failure non-fatal
-    _c = None  # type: ignore
+    _c = None
 
 try:
     from scipy.sparse import csr_matrix
 except Exception:  # pragma: no cover
-    csr_matrix = object  # type: ignore
+    csr_matrix = object
 
 
 def rk4_sparse_eigen(

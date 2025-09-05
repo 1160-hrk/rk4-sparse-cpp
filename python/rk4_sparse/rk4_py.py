@@ -19,7 +19,7 @@ try:
     from numba import njit
 except ImportError:
     # Fallback no-op decorator compatible with @njit(...) usage
-    def njit(*dargs, **dkwargs) -> Any:
+    def njit(*dargs: Any, **dkwargs: Any) -> Any:
         if dargs and callable(dargs[0]) and len(dargs) == 1 and not dkwargs:
             # Used as @njit without args
             return dargs[0]
