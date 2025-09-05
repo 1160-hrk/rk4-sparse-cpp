@@ -37,4 +37,4 @@ for i in range(3):
         val = H0.data[j]
         print(f"  列{col_idx}: {val} * {psi0[col_idx]} = {val * psi0[col_idx]}")
         result[i] += val * psi0[col_idx]
-print(f"手動計算結果: {result}") 
+print(f"手動計算結果: {result}")

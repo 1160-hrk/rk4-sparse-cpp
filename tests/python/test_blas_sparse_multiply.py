@@ -26,4 +26,4 @@ print("result:", result)
 print("expected:", expected)
 
 # 検証
-assert np.allclose(result, expected), "BLASスパース行列-ベクトル積の結果が一致しません" 
+assert np.allclose(result, expected), "BLASスパース行列-ベクトル積の結果が一致しません"

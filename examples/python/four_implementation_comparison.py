@@ -2,16 +2,18 @@ import sys
 import os
 
 # プロジェクトルートへのパスを追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
-
-savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
-os.makedirs(savepath, exist_ok=True)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..',
+                                'python'))
 
 import numpy as np
 import time
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
-from rk4_sparse import rk4_sparse_py, rk4_sparse_eigen, rk4_sparse_eigen_cached, rk4_numba_py
+from rk4_sparse import (rk4_sparse_py, rk4_sparse_eigen,
+                        rk4_sparse_eigen_cached, rk4_numba_py)
+
+savepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
+os.makedirs(savepath, exist_ok=True)
 
 
 # シミュレーションパラメータ
@@ -39,7 +41,7 @@ psi0 = np.array([1, 0], dtype=np.complex128)
 
 # 正弦波の電場を生成
 t = np.arange(0, dt_E * (steps_E+2), dt_E)
-Ex = E0 * np.sin(omega_L * t) 
+Ex = E0 * np.sin(omega_L * t)
 Ey = np.zeros_like(Ex)
 
 # 入力型の確認
@@ -75,7 +77,8 @@ results['numba'] = rk4_numba_py(
 )
 end_t = time.perf_counter()
 timings['numba'] = end_t - start_t
-print(f"Python-Numba implementation completed in {timings['numba']:.6f} seconds")
+print(f"Python-Numba implementation completed in "
+      f"{timings['numba']:.6f} seconds")
 print(f"Result shape: {results['numba'].shape}")
 
 # 2. Python-sparse実装
@@ -92,7 +95,8 @@ results['py_sparse'] = rk4_sparse_py(
 )
 end_t = time.perf_counter()
 timings['py_sparse'] = end_t - start_t
-print(f"Python-sparse implementation completed in {timings['py_sparse']:.6f} seconds")
+print(f"Python-sparse implementation completed in "
+      f"{timings['py_sparse']:.6f} seconds")
 print(f"Result shape: {results['py_sparse'].shape}")
 
 # 3. C++ Eigen実装
@@ -109,7 +113,8 @@ results['cpp_eigen'] = rk4_sparse_eigen(
 )
 end_t = time.perf_counter()
 timings['cpp_eigen'] = end_t - start_t
-print(f"C++ Eigen implementation completed in {timings['cpp_eigen']:.6f} seconds")
+print(f"C++ Eigen implementation completed in "
+      f"{timings['cpp_eigen']:.6f} seconds")
 print(f"Result shape: {results['cpp_eigen'].shape}")
 
 # 4. C++ Eigen Cached実装
@@ -126,7 +131,8 @@ results['cpp_eigen_cached'] = rk4_sparse_eigen_cached(
 )
 end_t = time.perf_counter()
 timings['cpp_eigen_cached'] = end_t - start_t
-print(f"C++ Eigen Cached implementation completed in {timings['cpp_eigen_cached']:.6f} seconds")
+print(f"C++ Eigen Cached implementation completed in "
+      f"{timings['cpp_eigen_cached']:.6f} seconds")
 print(f"Result shape: {results['cpp_eigen_cached'].shape}")
 
 # 各実装での基底状態と励起状態の占有数を計算
@@ -179,7 +185,7 @@ plt.title('Performance Comparison')
 plt.grid(True, axis='y')
 # バーの上に数値を表示
 for bar, time_val in zip(bars, times):
-    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.001, 
+    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.001,
              f'{time_val:.4f}', ha='center', va='bottom')
 
 # サブプロット4-7: 各実装と解析解の差
@@ -188,9 +194,11 @@ titles = ['Python-Numba', 'Python-Sparse', 'C++ Eigen', 'C++ Eigen Cached']
 
 for i, (impl, title) in enumerate(zip(implementations, titles)):
     plt.subplot(3, 3, 4 + i)
-    plt.plot(t_analytical, np.abs(populations[impl]['ground'] - P0_analytical), 
+    plt.plot(t_analytical,
+             np.abs(populations[impl]['ground'] - P0_analytical),
              'b-', label='Ground state diff', alpha=0.7)
-    plt.plot(t_analytical, np.abs(populations[impl]['excited'] - P1_analytical), 
+    plt.plot(t_analytical,
+             np.abs(populations[impl]['excited'] - P1_analytical),
              'r-', label='Excited state diff', alpha=0.7)
     plt.xlabel('Time (a.u.)')
     plt.ylabel('|Population difference|')
@@ -204,9 +212,13 @@ plt.subplot(3, 3, 8)
 reference = 'cpp_eigen_cached'
 for name in implementations:
     if name != reference:
-        plt.plot(t_analytical, np.abs(populations[name]['ground'] - populations[reference]['ground']), 
+        plt.plot(t_analytical,
+                 np.abs(populations[name]['ground'] -
+                        populations[reference]['ground']),
                  label=f'{name} vs {reference} (ground)', alpha=0.7)
-        plt.plot(t_analytical, np.abs(populations[name]['excited'] - populations[reference]['excited']), 
+        plt.plot(t_analytical,
+                 np.abs(populations[name]['excited'] -
+                        populations[reference]['excited']),
                  label=f'{name} vs {reference} (excited)', alpha=0.7)
 plt.xlabel('Time (a.u.)')
 plt.ylabel('|Population difference|')
@@ -225,7 +237,8 @@ plt.grid(True)
 plt.legend()
 
 plt.tight_layout()
-plt.savefig(os.path.join(savepath, 'four_implementation_comparison.png'), dpi=300, bbox_inches='tight')
+plt.savefig(os.path.join(savepath, 'four_implementation_comparison.png'),
+            dpi=300, bbox_inches='tight')
 plt.close()
 
 # 結果の表示
@@ -239,7 +252,8 @@ for name, time_val in timings.items():
 
 print("\n=== Final Populations ===")
 for name, pop in populations.items():
-    print(f"{name:20}: Ground={pop['ground'][-1]:.6f}, Excited={pop['excited'][-1]:.6f}")
+    print(f"{name:20}: Ground={pop['ground'][-1]:.6f}, "
+          f"Excited={pop['excited'][-1]:.6f}")
 
 print("\n=== Analytical Solution ===")
 print(f"Ground state: {P0_analytical[-1]:.6f}")
@@ -250,16 +264,22 @@ print("\n=== Maximum Differences ===")
 reference = 'cpp_eigen_cached'
 for name in implementations:
     if name != reference:
-        max_diff_ground = np.max(np.abs(populations[name]['ground'] - populations[reference]['ground']))
-        max_diff_excited = np.max(np.abs(populations[name]['excited'] - populations[reference]['excited']))
-        print(f"{name} vs {reference}: Ground={max_diff_ground:.2e}, Excited={max_diff_excited:.2e}")
+        max_diff_ground = np.max(np.abs(populations[name]['ground'] -
+                                        populations[reference]['ground']))
+        max_diff_excited = np.max(np.abs(populations[name]['excited'] -
+                                         populations[reference]['excited']))
+        print(f"{name} vs {reference}: Ground={max_diff_ground:.2e}, "
+              f"Excited={max_diff_excited:.2e}")
 
 # 解析解との差の最大値を計算
 print("\n=== Maximum Differences vs Analytical ===")
 for name in implementations:
-    max_diff_ground = np.max(np.abs(populations[name]['ground'] - P0_analytical))
-    max_diff_excited = np.max(np.abs(populations[name]['excited'] - P1_analytical))
-    print(f"{name:20}: Ground={max_diff_ground:.2e}, Excited={max_diff_excited:.2e}")
+    max_diff_ground = np.max(np.abs(populations[name]['ground'] -
+                                    P0_analytical))
+    max_diff_excited = np.max(np.abs(populations[name]['excited'] -
+                                     P1_analytical))
+    print(f"{name:20}: Ground={max_diff_ground:.2e}, "
+          f"Excited={max_diff_excited:.2e}")
 
 # 性能比較
 print("\n=== Performance Analysis ===")
@@ -268,5 +288,6 @@ for name, time_val in timings.items():
     speedup = fastest_time / time_val
     print(f"{name:20}: {speedup:.2f}x slower than fastest")
 
-print(f"\nPlot saved as {os.path.join(savepath, 'four_implementation_comparison.png')}")
-print("="*60) 
+print(f"\nPlot saved as "
+      f"{os.path.join(savepath, 'four_implementation_comparison.png')}")
+print("="*60)

@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Union
+from typing import Union
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -208,7 +208,7 @@ def rk4_numba_py(
     Ex3[:, 0], Ey3[:, 0] = Ex[0:-2:2], Ey[0:-2:2]
     Ex3[:, 1], Ey3[:, 1] = Ex[1:-1:2], Ey[1:-1:2]
     Ex3[:, 2], Ey3[:, 2] = Ex[2::2], Ey[2::2]
-    
+
     psi = psi0.copy()
     dim = psi.size
     n_out = steps // stride + 1

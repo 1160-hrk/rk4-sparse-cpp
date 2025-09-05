@@ -37,13 +37,13 @@ print("Ex3[0] type:", type(Ex3[0]))
 print("Ex3[0]:", Ex3[0])
 
 try:
-out = rk4_propagate(
-    H0, mux, muy, psi0,
-    Ex3, Ey3,
-    0.01, 10, 1,
-    False, True
-)
+    out = rk4_propagate(
+        H0, mux, muy, psi0,
+        Ex3, Ey3,
+        0.01, 10, 1,
+        False, True
+    )
     print("Output shape:", out.shape)
-print(out)
+    print(out)
 except Exception as e:
     print("Error:", e)
